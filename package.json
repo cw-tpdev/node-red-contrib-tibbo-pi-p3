@@ -48,7 +48,7 @@
     }
   },
   "version": "1.0.0",
-  "description": "Node-RED nodes for Tibbo-Pi P3",
+  "description": "Node-RED nodes for Tibbo-Pi P3 ",
   "main": "tpInitialize.js",
   "scripts": {},
   "keywords": [
