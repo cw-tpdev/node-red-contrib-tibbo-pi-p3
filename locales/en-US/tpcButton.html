@@ -1,0 +1,34 @@
+<script type="text/x-red" data-help-name="tp-button in">
+    <p>Tibbo-Pi button</p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>btn</code>: button (1:RST, 2:MD)</p>
+            <p><code>v</code>: 1:Push, 0:Release</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    RST Push<br>
+                    <pre>{btn: 1, v: 1}</pre>
+                </li>
+                <li>
+                    RST Release<br>
+                    <pre>{btn: 1, v: 0}</pre>
+                </li>
+                <li>
+                    MD Push<br>
+                    <pre>{btn: 2, v: 1}</pre>
+                </li>
+                <li>
+                    MD Release<br>
+                    <pre>{btn: 2, v: 0}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

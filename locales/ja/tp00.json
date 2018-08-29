@@ -1,0 +1,43 @@
+﻿{
+	"tp00": {
+		"label": {
+			"serial": "シリアル",
+			"communication": "通信",
+			"pin": "ピン",
+			"lineA": "ラインA",
+			"lineB": "ラインB",
+			"lineC": "ラインC",
+			"lineD": "ラインD",
+			"settings": "設定",
+			"speed": "スピード",
+			"mode": "モード",
+			"endian": "エンディアン",
+			"bigEndian": "ビッグエンディアン",
+			"littleEndian": "リトルエンディアン",
+			"unused": "未使用",
+			"pinTipsGpio": "OUT(TTL出力)は電流制限機能がないため、短絡などで大電流が流れると内部部品が破壊されます。接続時の回路構成にご注意願います。",
+			"pinTips": "使用できるラインはTibbitにより異なります。",
+			"baudRate": "ボーレート",
+			"lineOut": "OUT(TTL出力)",
+			"lineOutOd": "OUT(オープンドレイン出力)"
+		}
+	},
+	"common": {
+		"name": "名前",
+		"tpSlot": "スロット",
+		"status": {
+			"connected": "TP接続済",
+			"tryConnecting": "TP接続中...",
+			"disconnected": "TP切断",
+			"disabled": "無効"
+		},
+        "other": "その他",
+        "host": "ホスト",
+        "connectedStatus": "接続状態",
+        "connectedStatusPtn": {
+            "start": "接続する",
+            "stop": "接続しない",
+            "disabled": "無効"
+        }
+	}
+}

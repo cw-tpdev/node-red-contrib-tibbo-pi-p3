@@ -1,0 +1,30 @@
+<script type="text/x-red" data-help-name="tp-LED out">
+    <p>Tibbo-Pi LED</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>no</code>: LED number (1 - 4)</p>
+            <p><code>v</code>: 1:Turn on, 0:Turn off</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    Turn on the LED1<br>
+                    <pre>{no: 1, v: 1}</pre>
+                </li>
+                <li>
+                    Turn off the LED1<br>
+                    <pre>{no: 1, v: 0}</pre>
+                </li>
+                <li>
+                    Turn on the LED2<br>
+                    <pre>{no: 2, v: 1}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

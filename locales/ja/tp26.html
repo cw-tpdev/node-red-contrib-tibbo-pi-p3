@@ -1,0 +1,50 @@
+<script type="text/x-red" data-help-name="Tibbit-#26">
+    <p>#26 赤外線リモコンデコーダ</p>
+
+    <h3>Details</h3>
+    <p>赤外線リモコンの赤外線コードを記録、再生。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2326">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <ul>
+                <li>
+                    記録開始<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'w'}</pre>
+                </li>
+                <li>
+                    記録データ取得<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'r'}</pre>
+                </li>
+                <li>
+                    記録データセット<br>
+                    <p>・<code>data</code>: 記録データ取得時のデータ</p>
+                    <p>e.g.</p>
+                    <pre>{act: 'set', data:'...'}</pre>
+                </li>
+                <li>
+                    記録データ再生<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'play'}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">string</span>
+        </dt>
+        <dd>
+            <p>記録データ取得時、データ</p>
+            <p>e.g.</p><pre>...</pre>
+        </dd>
+    </dl>
+
+</script>

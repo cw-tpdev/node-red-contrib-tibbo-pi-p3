@@ -1,0 +1,30 @@
+<script type="text/x-red" data-help-name="tp-buzzer out">
+    <p>Tibbo-Pi buzzer</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>ptn</code>: pattern1 - 6(0:Stop the buzzer)</p>
+            <p><code>time</code>: Time to sound buzzer(Milliseconds, 0: unlimited)</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    pattern:1 1second<br>
+                    <pre>{ptn: 1, time: 1000}</pre>
+                </li>
+                <li>
+                    pattern:2 2second<br>
+                    <pre>{ptn: 2, time: 2000}</pre>
+                </li>
+                <li>
+                    Stop the buzzer<br>
+                    <pre>{ptn: 0, time: 0}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

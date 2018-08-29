@@ -1,0 +1,38 @@
+<script type="text/x-red" data-help-name="Tibbit-#59 out">
+    <p>#59 Two 24V PNP isolated open collector outputs</p>
+
+    <h3>Details</h3>
+    <p>Two 24V PNP isolated open collector outputs</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2359">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>line</code>: A or B</p>
+            <p><code>v</code>: 1:HIGH, 0:LOW</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    Line A LOW<br>
+                    <pre>[{line:'A', v: 0}]</pre>
+                </li>
+                <li>
+                    Line A HIGH<br>
+                    <pre>[{line:'A', v: 1}]</pre>
+                </li>
+                <li>
+                    Line B LOW<br>
+                    <pre>[{line:'B', v: 0}]</pre>
+                </li>
+                <li>
+                    Line B HIGH<br>
+                    <pre>[{line:'B', v: 1}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

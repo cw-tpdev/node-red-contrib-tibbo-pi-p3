@@ -1,0 +1,42 @@
+<script type="text/x-red" data-help-name="Tibbit-#05 out">
+    <p>#05 RS485 port</p>
+
+    <h3>Details</h3>
+    <p>RS485 port with full-duplex or half-duplex operation.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2305">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">buffer object</span>
+        </dt>
+        <dd>
+            <p>Input the OUT to the device.</p>
+            <p>e.g.</p><pre>Buffer.from([0x00]);</pre>
+            <p>e.g.</p><pre>Buffer.from("test");</pre>
+
+            <br>
+            <p>IN/OUT<br>
+            1:output, 0:input</p>
+            <p>e.g.</p><pre>{act: 'io', v: 1}</pre>
+        </dd>
+    </dl>
+</script>
+
+<script type="text/x-red" data-help-name="Tibbit-#05 in">
+    <p>#05 RS485 port</p>
+
+    <h3>Details</h3>
+    <p>RS485 port with full-duplex or half-duplex operation.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2305">Tibbit Blocks</a></p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">buffer object</span>
+        </dt>
+        <dd>
+            <p>NOTE: Output the IN from the device.</p>
+        </dd>
+    </dl>
+</script>

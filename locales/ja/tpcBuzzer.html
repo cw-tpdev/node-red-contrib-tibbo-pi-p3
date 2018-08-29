@@ -1,0 +1,33 @@
+<script type="text/x-red" data-help-name="tp-buzzer out">
+    <p>Tibbo-Pi ブザー</p>
+
+    <h3>Details</h3>
+    <p>Tibbo-Piのブザーを鳴らします。</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>ptn</code>: パターン1~6(0の場合はブザーを止める)</p>
+            <p><code>time</code>: 鳴らす時間(ミリ秒、0の場合は無制限)</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    パターン1で1秒鳴らす<br>
+                    <pre>{ptn: 1, time: 1000}</pre>
+                </li>
+                <li>
+                    パターン2で2秒鳴らす<br>
+                    <pre>{ptn: 2, time: 2000}</pre>
+                </li>
+                <li>
+                    ブザーを止める<br>
+                    <pre>{ptn: 0, time: 0}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

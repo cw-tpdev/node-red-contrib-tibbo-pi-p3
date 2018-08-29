@@ -1,0 +1,36 @@
+﻿{
+	"tpConfigSerial": {
+		"label": {
+			"name": "name",
+			"baudRate": "Baud Rate",
+			"buffer": "Buffer",
+			"communication": "Method",
+			"dataBits": "Data Bits",
+			"input": "Input",
+			"lineA": "LineA",
+			"lineB": "LineB",
+			"lineC": "LineC",
+			"lineD": "LineD",
+			"mode": "Mode",
+			"parity": "Parity",
+			"parityNone": "none",
+			"parityEven": "Even",
+			"parityOdd": "Odd",
+			"pin": "Pin",
+			"settings": "Settings",
+			"speed": "Speed",
+			"splitInput": "Split Input",
+			"startBits": "Start Bits",
+			"stopBits": "Stop Bits",
+			"onTheChar": "on the character",
+			"aTimeoutOf": "after a timeout of",
+			"intoFixedLengthOf": "into fixed lenghts of",
+			"through": "none",
+			"hardwareFlow": "Hardware Flow",
+			"hardOff": "off",
+			"hardOn": "on",
+			"pinTips": "Available lines depend on Tibbit.",
+			"seriOnTheCharactorTips": "1 byte only."
+		}
+	}
+}

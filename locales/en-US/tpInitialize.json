@@ -1,0 +1,12 @@
+{
+    "initialize": {
+        "label": {
+			"name" : "Name",
+			"make" : "Create a flow configuration file. (config.json)"
+		},
+        "status": {
+            "started": "TP Started",
+            "stopped": "TP Stopped"
+        }
+    }
+}

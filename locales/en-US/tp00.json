@@ -1,0 +1,43 @@
+﻿{
+	"tp00": {
+		"label": {
+			"serial": "serial",
+			"communication": "Method",
+			"pin": "Pin",
+			"lineA": "LineA",
+			"lineB": "LineB",
+			"lineC": "LineC",
+			"lineD": "LineD",
+			"settings": "Settings",
+			"speed": "Speed",
+			"mode": "Mode",
+			"endian": "Endian",
+			"bigEndian": "Big Endian",
+			"littleEndian": "Little Endian",
+			"unused": "none",
+			"pinTipsGpio": "Since OUT (TTL output) has no current limit function, internal components are destroyed when large current flows due to a short circuit or the like. Please pay attention to the circuit configuration at the time of connection.",
+			"pinTips": "Available lines depend on Tibbit.",
+			"baudRate": "Baud Rate",
+			"lineOut": "OUT(TTL)",
+			"lineOutOd": "OUT(Open drain)"
+		}
+	},
+	"common": {
+		"name": "Name",
+		"tpSlot": "Slot",
+		"status": {
+			"connected": "TP Connected",
+			"tryConnecting": "TP Connecting...",
+			"disconnected": "TP Disconnected",
+			"disabled": "Disabled"
+		},
+        "other": "Other",
+        "host": "Host",
+        "connectedStatus": "Status",
+        "connectedStatusPtn": {
+            "start": "Connecting",
+            "stop": "Do not connect",
+            "disabled": "Disabled"
+        }
+	}
+}

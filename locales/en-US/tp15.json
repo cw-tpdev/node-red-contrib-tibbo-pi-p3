@@ -1,0 +1,24 @@
+﻿{
+    "tp15": {
+        "label": {
+        }
+    },
+	"common": {
+		"name": "Name",
+		"tpSlot": "Slot",
+		"status": {
+			"connected": "TP Connected",
+			"tryConnecting": "TP Connecting...",
+			"disconnected": "TP Disconnected",
+			"disabled": "Disabled"
+		},
+        "other": "Other",
+        "host": "Host",
+        "connectedStatus": "Status",
+        "connectedStatusPtn": {
+            "start": "Connecting",
+            "stop": "Do not connect",
+            "disabled": "Disabled"
+        }
+	}
+}

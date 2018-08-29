@@ -1,0 +1,251 @@
+<script type="text/javascript">
+
+    function tp02save() {
+
+        if ($("#node-input-_mode").val() == 'RS485') {
+
+            // 追加
+            var exists = false;
+            for (var i = 0; i < this.moreDefaults.length; i++) {
+                if (this.moreDefaults[i].tmp_mode == "RS485") {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                // RS485の設定を追加
+                this.moreDefaults.push(
+                    {
+                        tmp_mode: "RS485",
+                        outputOnly: { value: false },
+                        communication: { value: "GPIO" },
+                        pinA: { value: "other" },
+                        pinB: { value: "other" },
+                        pinC: { value: "OUT" },
+                        pinD: { value: "other" },
+                    }
+                );
+            }
+
+        } else {
+
+            // 削除
+            for (var i = 0; i < this.moreDefaults.length; i++) {
+                if (this.moreDefaults[i].tmp_mode == "RS485") {
+                    this.moreDefaults.splice(i, 1);
+                    break;
+                }
+            }
+
+        }
+
+        console.log(this.moreDefaults);
+
+    }
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('Tibbit-#02', {
+        category: 'Tibbo‐Pi',
+        color: '#40a1d6',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "", required: true },
+            communication: { value: "Serial" },
+
+            serialConf: { value: "", type: "tp-config-serial", required: false },
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+
+            _mode: { value: "RS232" },
+            moreDefaults: {
+                value: [
+                    {
+                        tpSlot: { value: "plus1" },
+                        outputOnly: { value: false },
+                        communication: { value: "GPIO" },
+                        pinA: { value: "OUT" },
+                        pinB: { value: "OUT" },
+                        pinC: { value: "OUT_OD" },
+                        pinD: { value: "IN" },
+                    }
+                ]
+            }
+
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "tbpi-icon.png",
+        label: function () {
+            var slot = this.tpSlot ? " [" + this.tpSlot + "]" : "";
+            var rtn = this.name || "Tibbit #02";
+            return rtn + slot;
+        },
+        oneditsave: tp02save
+    });
+</script>
+
+<script type="text/x-red" data-template-name="Tibbit-#02">
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-tpSlot"><i class="icon-tag"></i> <span data-i18n="common.tpSlot"></span></label>
+        <select style="width: 100px" id="node-input-tpSlot">
+            <option value="S01" >S01</option>
+            <option value="S03" >S03</option>
+            <option value="S07" >S07</option>
+            <option value="S09" >S09</option>
+        </select>
+    </div>
+
+    <!-- serial pin -->
+    <div class="form-row" id="node-tp02-serial_p">
+    </div>
+
+    <!-- serial -->
+    <div class="form-row" id="node-tp02-serial">
+        <label for="node-input-serialConf"><i class="icon-tag"></i> <span data-i18n="tp02.label.serial"></span></label>
+        <input type="text" id="node-input-serialConf">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-_kind"><i class="icon-tag"></i> <span data-i18n="tp02.label.mode"></span></label>
+        <select style="width: 100px" id="node-input-_mode">
+            <option value="RS232" >RS232</option>
+            <option value="RS422" >RS422</option>
+            <option value="RS485" >RS485</option>
+        </select>
+    </div>
+    <div class="form-tips">
+        <span data-i18n="tp02.label.tipsSerialHw"></span>
+    </div>
+    <br>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('Tibbit-#02 in', {
+        category: 'Tibbo‐Pi',
+        color: '#40a1d6',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "", required: true },
+            communication: { value: "Serial" },
+            outputOnly: { value: true },
+
+            serialConf: { value: "", type: "tp-config-serial", required: false },
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+
+            _mode: { value: "RS232" },
+            moreDefaults: {
+                value: [
+                    {
+                        tpSlot: { value: "plus1" },
+                        outputOnly: { value: false },
+                        communication: { value: "GPIO" },
+                        pinA: { value: "OUT" },
+                        pinB: { value: "OUT" },
+                        pinC: { value: "other" },
+                        pinD: { value: "other" },
+                    },
+                    {
+                        tpSlot: { value: "plus1" },
+                        outputOnly: { value: true },
+                        communication: { value: "GPIO" },
+                        pinA: { value: "other" },
+                        pinB: { value: "other" },
+                        pinC: { value: "other" },
+                        pinD: { value: "IN_Edge" },
+                    }
+                ]
+            }
+        },
+        inputs: 0,
+        outputs: 2,
+        outputLabels: ["data", "DSR"],
+        icon: "tbpi-icon.png",
+        label: function () {
+            var slot = this.tpSlot ? " [" + this.tpSlot + "]" : "";
+            var rtn = this.name || "Tibbit #02";
+            return rtn + slot;
+        },
+        oneditsave: tp02save
+    });
+</script>
+
+<script type="text/x-red" data-template-name="Tibbit-#02 in">
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-tpSlot"><i class="icon-tag"></i> <span data-i18n="common.tpSlot"></span></label>
+        <select style="width: 100px" id="node-input-tpSlot">
+            <option value="S01" >S01</option>
+            <option value="S03" >S03</option>
+            <option value="S07" >S07</option>
+            <option value="S09" >S09</option>
+        </select>
+    </div>
+
+    <!-- serial pin -->
+    <div class="form-row" id="node-tp02-serial_p">
+    </div>
+
+    <!-- serial -->
+    <div class="form-row" id="node-tp02-serial">
+        <label for="node-input-serialConf"><i class="icon-tag"></i> <span data-i18n="tp02.label.serial"></span></label>
+        <input type="text" id="node-input-serialConf">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-_kind"><i class="icon-tag"></i> <span data-i18n="tp02.label.mode"></span></label>
+        <select style="width: 100px" id="node-input-_mode">
+            <option value="RS232" >RS232</option>
+            <option value="RS422" >RS422</option>
+            <option value="RS485" >RS485</option>
+        </select>
+    </div>
+    <div class="form-tips">
+        <span data-i18n="tp02.label.tipsSerialHw"></span>
+    </div>
+    <br>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>

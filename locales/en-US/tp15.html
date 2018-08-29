@@ -1,0 +1,30 @@
+<script type="text/x-red" data-help-name="Tibbit-#15 out">
+    <p>#15 High-voltage AC solid state relay</p>
+
+    <h3>Details</h3>
+    <p>High-voltage AC solid state normally opened relay.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2315">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>line</code>: A</p>
+            <p><code>v</code>: 1:HIGH, 0:LOW</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    Line A LOW<br>
+                    <pre>[{line:'A', v: 0}]</pre>
+                </li>
+                <li>
+                    Line A HIGH<br>
+                    <pre>[{line:'A', v: 1}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

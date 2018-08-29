@@ -1,0 +1,70 @@
+<script type="text/x-red" data-help-name="Tibbit-#31">
+    <p>#31 PICマイコン</p>
+
+    <h3>Details</h3>
+    <p>汎用マイコン。Microchip社製PIC16F1824。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2331">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <ul>
+                <li>
+                    Write<br>
+                    ・<code>act</code>: w<br>
+                    ・<code>add</code>: address<br>
+                    ・<code>v</code>: value
+                </li>
+                <li>
+                    Read<br>
+                    ・<code>act</code>: r<br>
+                    ・<code>add</code>: address<br>
+                    ・<code>len</code>: size
+                </li>
+                <li>
+                    Reset<br>
+                    ・<code>act</code>: rst<br>
+                </li>
+                <li>
+                    INT<br>
+                    ・<code>act</code>: int<br>
+                </li>
+            </ul>
+            <p>e.g.</p><pre>[{act: 'w', add: 0x23, v: [0x00]}, {act: 'r', add: 0x23, len:2}, {act: 'rst'}, {act: 'int'}]</pre>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            r or int
+            <p>e.g.</p><pre>{'r': [[0x00]], 'int': [1]}</pre>
+        </dd>
+    </dl>
+
+</script>
+
+<script type="text/x-red" data-help-name="Tibbit-#31 in">
+    <p>#31 PICマイコン</p>
+
+    <h3>Details</h3>
+    <p>汎用マイコン。Microchip社製PIC16F1824。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2331">Tibbit Blocks</a></p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">number</span>
+        </dt>
+        <dd>
+            INT: 1:HIGH, 0:LOW<br>
+            <p>e.g.</p><pre>1</pre>
+        </dd>
+    </dl>
+</script>

@@ -1,0 +1,71 @@
+<script type="text/javascript">
+    RED.nodes.registerType('Tibbit-#22', {
+        category: 'Tibbo‐Pi',
+        color: '#BEE47D',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "", required: true },
+            communication: { value: "TP22" },
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+
+            _kind: {value: "PT100"}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "tbpi-icon.png",
+        label: function () {
+            var slot = this.tpSlot? " [" + this.tpSlot + "]": "";
+            var rtn = this.name || "Tibbit #22";
+            return rtn + slot;
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="Tibbit-#22">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-tpSlot"><i class="icon-tag"></i> <span data-i18n="common.tpSlot"></span></label>
+        <select style="width: 100px" id="node-input-tpSlot">
+            <option value="S01" >S01</option>
+            <option value="S02" >S02</option>
+            <option value="S03" >S03</option>
+            <option value="S04" >S04</option>
+            <option value="S05" >S05</option>
+            <option value="S06" >S06</option>
+            <option value="S07" >S07</option>
+            <option value="S08" >S08</option>
+            <option value="S09" >S09</option>
+            <option value="S10" >S10</option>
+        </select>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-_kind"><i class="icon-tag"></i> <span data-i18n="tp22.label.sensor"></span></label>
+        <select style="width: 100px" id="node-input-_kind">
+            <option value="PT100" >PT100</option>
+            <option value="PT200" >PT200</option>
+            <option value="PT500" >PT500</option>
+            <option value="PT1000" >PT1000</option>
+        </select>
+    </div>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>

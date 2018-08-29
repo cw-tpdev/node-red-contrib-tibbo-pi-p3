@@ -1,0 +1,535 @@
+<script type="text/javascript">
+
+    /* 初期化 */
+    function tp00prepare() {
+        $("#node-input-communication").on("change", function () {
+            if (this.value === "GPIO") {
+
+                $("#node-tp00-gpio").show();
+                $("#node-tp00-i2c").hide();
+                $("#node-tp00-spi").hide();
+                $("#node-tp00-serial").hide();
+
+                $("#node-tp00-gpio_p").show();
+                $("#node-tp00-i2c_p").hide();
+                $("#node-tp00-spi_p").hide();
+                $("#node-tp00-serial_p").hide();
+
+                // slot プルダウン生成
+                var tmpSlot = $('#node-input-tpSlot').val();
+                $('#node-input-tpSlot > option').remove();
+                for (var i = 1; i <= 10; i++) {
+                    var slot = 'S' + ('00' + i).slice(-2);
+                    $('#node-input-tpSlot').append($('<option>').html(slot).val(slot));
+                }
+                $('#node-input-tpSlot').val(tmpSlot);
+
+                // pin プルダウンの選択
+                $("#node-input-pinA-gpio").val($("#node-input-pinA").val());
+                if (!$("#node-input-pinA-gpio").val()) {
+                    $('#node-input-pinA-gpio option:first').prop('selected', true);
+                    $("#node-input-pinA").val($("#node-input-pinA-gpio").val());
+                }
+                $("#node-input-pinB-gpio").val($("#node-input-pinB").val());
+                if (!$("#node-input-pinB-gpio").val()) {
+                    $('#node-input-pinB-gpio option:first').prop('selected', true);
+                    $("#node-input-pinB").val($("#node-input-pinB-gpio").val());
+                }
+                $("#node-input-pinC-gpio").val($("#node-input-pinC").val());
+                if (!$("#node-input-pinC-gpio").val()) {
+                    $('#node-input-pinC-gpio option:first').prop('selected', true);
+                    $("#node-input-pinC").val($("#node-input-pinC-gpio").val());
+                }
+                $("#node-input-pinD-gpio").val($("#node-input-pinD").val());
+                if (!$("#node-input-pinD-gpio").val()) {
+                    $('#node-input-pinD-gpio option:first').prop('selected', true);
+                    $("#node-input-pinD").val($("#node-input-pinD-gpio").val());
+                }
+            }
+            else if (this.value === "I2C") {
+                $("#node-tp00-gpio").hide();
+                $("#node-tp00-i2c").show();
+                $("#node-tp00-spi").hide();
+                $("#node-tp00-serial").hide();
+
+                $("#node-tp00-gpio_p").hide();
+                $("#node-tp00-i2c_p").show();
+                $("#node-tp00-spi_p").hide();
+                $("#node-tp00-serial_p").hide();
+
+                // slot プルダウン生成
+                var tmpSlot = $('#node-input-tpSlot').val();
+                $('#node-input-tpSlot > option').remove();
+                for (var i = 1; i <= 10; i++) {
+                    var slot = 'S' + ('00' + i).slice(-2);
+                    $('#node-input-tpSlot').append($('<option>').html(slot).val(slot));
+                }
+                $('#node-input-tpSlot').val(tmpSlot);
+
+            }
+            else if (this.value === "SPI") {
+                $("#node-tp00-gpio").hide();
+                $("#node-tp00-i2c").hide();
+                $("#node-tp00-spi").show();
+                $("#node-tp00-serial").hide();
+
+                $("#node-tp00-gpio_p").hide();
+                $("#node-tp00-i2c_p").hide();
+                $("#node-tp00-spi_p").show();
+                $("#node-tp00-serial_p").hide();
+
+                // slot プルダウン生成
+                var tmpSlot = $('#node-input-tpSlot').val();
+                $('#node-input-tpSlot > option').remove();
+                for (var i = 1; i <= 10; i++) {
+                    var slot = 'S' + ('00' + i).slice(-2);
+                    $('#node-input-tpSlot').append($('<option>').html(slot).val(slot));
+                }
+                $('#node-input-tpSlot').val(tmpSlot);
+
+            }
+            else if (this.value === "Serial") {
+                $("#node-tp00-gpio").hide();
+                $("#node-tp00-i2c").hide();
+                $("#node-tp00-spi").hide();
+                $("#node-tp00-serial").show();
+
+                $("#node-tp00-gpio_p").hide();
+                $("#node-tp00-i2c_p").hide();
+                $("#node-tp00-spi_p").hide();
+                $("#node-tp00-serial_p").show();
+
+                // slot プルダウン生成
+                var tmpSlot = $('#node-input-tpSlot').val();
+                $('#node-input-tpSlot > option').remove();
+                for (var i = 1; i <= 10; i++) {
+                    if ((i % 2) != 0) {
+                        var slot = 'S' + ('00' + i).slice(-2);
+                        $('#node-input-tpSlot').append($('<option>').html(slot).val(slot));
+                    }
+                }
+                $('#node-input-tpSlot').val(tmpSlot);
+
+            }
+        });
+
+        $("#node-input-pinA-gpio").on("change", function () {
+            $("#node-input-pinA").val($("#node-input-pinA-gpio").val());
+        });
+        $("#node-input-pinB-gpio").on("change", function () {
+            $("#node-input-pinB").val($("#node-input-pinB-gpio").val());
+        });
+        $("#node-input-pinC-gpio").on("change", function () {
+            $("#node-input-pinC").val($("#node-input-pinC-gpio").val());
+        });
+        $("#node-input-pinD-gpio").on("change", function () {
+            $("#node-input-pinD").val($("#node-input-pinD-gpio").val());
+        });
+    }
+
+    /* 保存処理 */
+    function tp00save() {
+
+        if ($("#node-input-communication").val() == 'GPIO') {
+            // none
+        } else {
+            $("#node-input-pinA").val("");
+            $("#node-input-pinB").val("");
+            $("#node-input-pinC").val("");
+            $("#node-input-pinD").val("");
+        }
+    }
+</script>
+
+<script type="text/javascript">
+
+    RED.nodes.registerType('Tibbit-#00', {
+        category: 'Tibbo‐Pi',
+        color: '#F1E9E0',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "", required: true },
+            communication: { value: "GPIO", required: true },
+
+            pinA: { value: "IN" },
+            pinB: { value: "IN" },
+            pinC: { value: "IN" },
+            pinD: { value: "IN" },
+
+            i2cBaudRateK: { value: "100", validate: RED.validators.number() },
+
+            spiSpeed: { value: "500", validate: RED.validators.number() },
+            spiMode: { value: "1" },
+            spiEndian: { value: "1" },
+
+            serialConf: { value: "", type: "tp-config-serial", required: false },
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "tbpi-icon.png",
+        label: function () {
+            var slot = this.tpSlot? " [" + this.tpSlot + "]": "";
+            var rtn = this.name || "Tibbit #00";
+            return rtn + slot;
+        },
+        oneditprepare: tp00prepare,
+        oneditsave: tp00save
+    });
+</script>
+
+<script type="text/x-red" data-template-name="Tibbit-#00">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-communication"><i class="icon-tag"></i> <span data-i18n="tp00.label.communication"></span></label>
+        <select type="text" style="width: 100px" id="node-input-communication">
+            <option value="GPIO" >GPIO</option>
+            <option value="I2C" >I2C</option>
+            <option value="SPI" >SPI</option>
+            <option value="Serial" >Serial</option>
+        </select>
+    </div>
+    
+    <div class="form-row">
+        <label for="node-input-tpSlot"><i class="icon-tag"></i> <span data-i18n="common.tpSlot"></span></label>
+        <select style="width: 100px" id="node-input-tpSlot">
+            <option value="S01" >S01</option>
+            <option value="S02" >S02</option>
+            <option value="S03" >S03</option>
+            <option value="S04" >S04</option>
+            <option value="S05" >S05</option>
+            <option value="S06" >S06</option>
+            <option value="S07" >S07</option>
+            <option value="S08" >S08</option>
+            <option value="S09" >S09</option>
+            <option value="S10" >S10</option>
+        </select>
+    </div>
+    
+    <!-- hidden pin -->
+    <input type="hidden" id="node-input-pinA">
+    <input type="hidden" id="node-input-pinB">
+    <input type="hidden" id="node-input-pinC">
+    <input type="hidden" id="node-input-pinD">
+
+    <!-- gpio pin -->
+    <div class="form-row" id="node-tp00-gpio_p">
+        <label for="node-input-pin"><i class="icon-tag"></i> <span data-i18n="tp00.label.pin"></span></label>
+        <div class="form-row">
+            <label for="node-input-pinA"> <span data-i18n="tp00.label.lineA"></span></label>
+            <select type="text" style="width: 220px" id="node-input-pinA-gpio">
+                <option value="IN" >IN</option>
+                <option value="IN_Analog" >IN_Analog</option>
+                <option value="OUT" data-i18n="tp00.label.lineOut">OUT</option>
+                <option value="OUT_OD" data-i18n="tp00.label.lineOutOd">OUT_OD</option>
+                <option value="IN_OUT" >IN_OUT</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinB"> <span data-i18n="tp00.label.lineB"></span></label>
+            <select type="text" style="width: 220px" id="node-input-pinB-gpio">
+                <option value="IN" >IN</option>
+                <option value="IN_Analog" >IN_Analog</option>
+                <option value="OUT" data-i18n="tp00.label.lineOut">OUT</option>
+                <option value="OUT_OD" data-i18n="tp00.label.lineOutOd">OUT_OD</option>
+                <option value="IN_OUT" >IN_OUT</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinC"> <span data-i18n="tp00.label.lineC"></span></label>
+            <select type="text" style="width: 220px" id="node-input-pinC-gpio">
+                <option value="IN" >IN</option>
+                <option value="IN_Analog" >IN_Analog</option>
+                <option value="OUT" data-i18n="tp00.label.lineOut">OUT</option>
+                <option value="OUT_OD" data-i18n="tp00.label.lineOutOd">OUT_OD</option>
+                <option value="IN_OUT" >IN_OUT</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinD"> <span data-i18n="tp00.label.lineD"></span></label>
+            <select type="text" style="width: 220px" id="node-input-pinD-gpio">
+                <option value="IN" >IN</option>
+                <option value="IN_Analog" >IN_Analog</option>
+                <option value="OUT" data-i18n="tp00.label.lineOut">OUT</option>
+                <option value="OUT_OD" data-i18n="tp00.label.lineOutOd">OUT_OD</option>
+                <option value="IN_OUT" >IN_OUT</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-tips">
+            <span data-i18n="tp00.label.pinTipsGpio" style="color: red;"></span>
+        </div>
+        <br>
+
+        <div class="form-tips">
+            <span data-i18n="tp00.label.pinTips"></span>
+        </div>
+        <br>
+    </div>
+    <!-- gpio -->
+    <div class="form-row" id="node-tp00-gpio">
+    </div>
+
+    <!-- i2c pin -->
+    <div class="form-row" id="node-tp00-i2c_p">
+        <label for="node-input-pin"><i class="icon-tag"></i> <span data-i18n="tp00.label.pin"></span></label>
+        <div class="form-row">
+            <label for="node-input-pinA"> <span data-i18n="tp00.label.lineA"></span></label>
+            <label for="node-input-pinA"> SCL</label>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinB"> <span data-i18n="tp00.label.lineB"></span></label>
+            <label for="node-input-pinB"> SDA</label>
+        </div>
+
+        <div class="form-tips">
+            <span data-i18n="tp00.label.pinTips"></span>
+        </div>
+        <br>
+    </div>
+    <!-- i2c -->
+    <div class="form-row" id="node-tp00-i2c">
+        <label for="node-input-baudrate"><i class="icon-tag"></i> <span data-i18n="tp00.label.settings"></span></label>
+        <div class="form-row">
+            <label for="node-input-i2cBaudRateK"> <span data-i18n="tp00.label.baudRate"></span></label>
+            <input type="text" style="width: 100px" id="node-input-i2cBaudRateK"> kHz
+        </div>
+    </div>
+    
+    <!-- spi pin -->
+    <div class="form-row" id="node-tp00-spi_p">
+        <label for="node-input-pin"><i class="icon-tag"></i> <span data-i18n="tp00.label.pin"></span></label>
+        <div class="form-row">
+            <label for="node-input-pinA"> <span data-i18n="tp00.label.lineA"></span></label>
+            <label for="node-input-pinA"> CS</label>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinB"> <span data-i18n="tp00.label.lineB"></span></label>
+            <label for="node-input-pinB"> SCLK</label>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinC"> <span data-i18n="tp00.label.lineC"></span></label>
+            <label for="node-input-pinC"> MOSI</label>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinD"> <span data-i18n="tp00.label.lineD"></span></label>
+            <label for="node-input-pinD"> MISO</label>
+        </div>
+
+        <div class="form-tips">
+            <span data-i18n="tp00.label.pinTips"></span>
+        </div>
+        <br>
+    </div>
+
+    <!-- serial pin -->
+    <div class="form-row" id="node-tp00-serial_p">
+    </div>
+
+    <!-- spi -->
+    <div class="form-row" id="node-tp00-spi">
+        <label for="node-input-baudrate"><i class="icon-tag"></i> <span data-i18n="tp00.label.settings"></span></label>
+        <div class="form-row">
+            <label for="node-input-spiSpeed"> <span data-i18n="tp00.label.speed"></span></label>
+            <input type="text" style="width: 100px" id="node-input-spiSpeed"> kHz
+        </div>
+        <div class="form-row">
+            <label for="node-input-spiMode"> <span data-i18n="tp00.label.mode"></span></label>
+            <select style="width: 100px" id="node-input-spiMode">
+                <option value="0" >0</option>
+                <option value="1" >1</option>
+                <option value="2" >2</option>
+                <option value="3" >3</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-spiEndian"> <span data-i18n="tp00.label.endian"></span></label>
+            <select style="width: 200px" id="node-input-spiEndian">
+                <option value="1" data-i18n="tp00.label.bigEndian"></option>
+                <option value="2" data-i18n="tp00.label.littleEndian"></option>
+            </select>
+        </div>
+    </div>
+
+    <!-- serial -->
+    <div class="form-row" id="node-tp00-serial">
+        <label for="node-input-serialConf"><i class="icon-tag"></i> <span data-i18n="tp00.label.serial"></span></label>
+        <input type="text" id="node-input-serialConf">
+    </div>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('Tibbit-#00 in', {
+        category: 'Tibbo‐Pi',
+        color: '#F1E9E0',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "", required: true },
+            communication: { value: "GPIO", required: true },
+            outputOnly: { value: true },
+
+            pinA: { value: "IN_Edge" },
+            pinB: { value: "IN_Edge" },
+            pinC: { value: "IN_Edge" },
+            pinD: { value: "IN_Edge" },
+
+            serialConf: { value: "", type: "tp-config-serial", required: false },
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+
+        },
+        inputs: 0,
+        outputs: 1,
+        icon: "tbpi-icon.png",
+        label: function () {
+            var slot = this.tpSlot? " [" + this.tpSlot + "]": "";
+            var rtn = this.name || "Tibbit #00";
+            return rtn + slot;
+        },
+        oneditprepare: tp00prepare,
+        oneditsave: tp00save
+    });
+
+</script>
+
+<script type="text/x-red" data-template-name="Tibbit-#00 in">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-communication"><i class="icon-tag"></i> <span data-i18n="tp00.label.communication"></span></label>
+        <select type="text" style="width: 100px" id="node-input-communication">
+            <option value="GPIO" >GPIO</option>
+            <option value="Serial" >Serial</option>
+        </select>
+    </div>
+    
+    <div class="form-row">
+        <label for="node-input-tpSlot"><i class="icon-tag"></i> <span data-i18n="common.tpSlot"></span></label>
+        <select style="width: 100px" id="node-input-tpSlot">
+            <option value="S01" >S01</option>
+            <option value="S02" >S02</option>
+            <option value="S03" >S03</option>
+            <option value="S04" >S04</option>
+            <option value="S05" >S05</option>
+            <option value="S06" >S06</option>
+            <option value="S07" >S07</option>
+            <option value="S08" >S08</option>
+            <option value="S09" >S09</option>
+            <option value="S10" >S10</option>
+        </select>
+    </div>
+    
+    <!-- hidden pin -->
+    <input type="hidden" id="node-input-pinA">
+    <input type="hidden" id="node-input-pinB">
+    <input type="hidden" id="node-input-pinC">
+    <input type="hidden" id="node-input-pinD">
+
+    <!-- gpio pin -->
+    <div class="form-row" id="node-tp00-gpio_p">
+        <label for="node-input-pin"><i class="icon-tag"></i> <span data-i18n="tp00.label.pin"></span></label>
+        <div class="form-row">
+            <label for="node-input-pinA"> <span data-i18n="tp00.label.lineA"></span></label>
+            <select type="text" style="width: 100px" id="node-input-pinA-gpio">
+                <option value="IN_Edge" >IN_Edge</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinB"> <span data-i18n="tp00.label.lineB"></span></label>
+            <select type="text" style="width: 100px" id="node-input-pinB-gpio">
+                <option value="IN_Edge" >IN_Edge</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinC"> <span data-i18n="tp00.label.lineC"></span></label>
+            <select type="text" style="width: 100px" id="node-input-pinC-gpio">
+                <option value="IN_Edge" >IN_Edge</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-input-pinD"> <span data-i18n="tp00.label.lineD"></span></label>
+            <select type="text" style="width: 100px" id="node-input-pinD-gpio">
+                <option value="IN_Edge" >IN_Edge</option>
+                <option value="other" data-i18n="tp00.label.unused">other</option>
+            </select>
+        </div>
+
+        <div class="form-tips">
+            <span data-i18n="tp00.label.pinTips"></span>
+        </div>
+        <br>
+    </div>
+    <!-- gpio -->
+    <div class="form-row" id="node-tp00-gpio">
+    </div>
+
+    <!-- i2c pin -->
+    <div class="form-row" id="node-tp00-i2c_p">
+    </div>
+    <!-- i2c -->
+    <div class="form-row" id="node-tp00-i2c">
+    </div>
+    
+    <!-- spi pin -->
+    <div class="form-row" id="node-tp00-spi_p">
+    </div>
+
+    <!-- spi -->
+    <div class="form-row" id="node-tp00-spi">
+    </div>
+
+    <!-- serial pin -->
+    <div class="form-row" id="node-tp00-serial_p">
+    </div>
+
+    <!-- serial -->
+    <div class="form-row" id="node-tp00-serial">
+        <label for="node-input-serialConf"><i class="icon-tag"></i> <span data-i18n="tp00.label.serial"></span></label>
+        <input type="text" id="node-input-serialConf">
+    </div>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>

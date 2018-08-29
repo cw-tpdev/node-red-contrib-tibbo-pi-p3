@@ -1,0 +1,43 @@
+<script type="text/x-red" data-help-name="Tibbit-#03 out">
+    <p>#03 Two low-power relays</p>
+
+    <h3>Details</h3>
+    <p>#03_1 Two low-power relays (configuration 1)</p>
+    <p>Two mechanical low-power relays with independent normally opened terminals.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2303_1">Tibbit Blocks</a></p>
+
+    <p>#03_2 Two low-power relays (configuration 2)</p>
+    <p>Two mechanical low-power relays with joined middle (common) terminals. Relay 1 has normally closed and normally opened terminals. Relay 2 only has the normally opened terminal exposed.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2303_2">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>line</code>: A or B</p>
+            <p><code>v</code>: 1:HIGH, 0:LOW</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    Line A LOW<br>
+                    <pre>[{line:'A', v: 0}]</pre>
+                </li>
+                <li>
+                    Line A HIGH<br>
+                    <pre>[{line:'A', v: 1}]</pre>
+                </li>
+                <li>
+                    Line B LOW<br>
+                    <pre>[{line:'B', v: 0}]</pre>
+                </li>
+                <li>
+                    Line B HIGH<br>
+                    <pre>[{line:'B', v: 1}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

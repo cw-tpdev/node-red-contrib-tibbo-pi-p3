@@ -1,0 +1,68 @@
+﻿{
+  "name": "node-red-contrib-tibbo-pi-p3",
+  "node-red": {
+    "nodes": {
+      "tpInitialize": "tpInitialize.js",
+      "tp00": "tp00.js",
+      "tp01": "tp01.js",
+      "tp02": "tp02.js",
+      "tp03": "tp03.js",
+      "tp04": "tp04.js",
+      "tp05": "tp05.js",
+      "tp06": "tp06.js",
+      "tp07": "tp07.js",
+      "tp09": "tp09.js",
+      "tp10": "tp10.js",
+      "tp11": "tp11.js",
+      "tp12": "tp12.js",
+      "tp13": "tp13.js",
+      "tp14": "tp14.js",
+      "tp15": "tp15.js",
+      "tp16": "tp16.js",
+      "tp17": "tp17.js",
+      "tp22": "tp22.js",
+      "tp23": "tp23.js",
+      "tp25": "tp25.js",
+      "tp26": "tp26.js",
+      "tp28": "tp28.js",
+      "tp29": "tp29.js",
+      "tp30": "tp30.js",
+      "tp31": "tp31.js",
+      "tp35": "tp35.js",
+      "tp36": "tp36.js",
+      "tp38": "tp38.js",
+      "tp39": "tp39.js",
+      "tp40": "tp40.js",
+      "tp41": "tp41.js",
+      "tp42": "tp42.js",
+      "tp52": "tp52.js",
+      "tp53": "tp53.js",
+      "tp54": "tp54.js",
+      "tp57": "tp57.js",
+      "tp58": "tp58.js",
+      "tp59": "tp59.js",
+      "tpcBuzzer": "tpcBuzzer.js",
+      "tpcLed": "tpcLed.js",
+      "tpcButton": "tpcButton.js",
+      "tpConfigSerial": "tpConfigSerial.js"
+    }
+  },
+  "version": "1.0.0",
+  "description": "Node-RED nodes for Tibbo-Pi P3",
+  "main": "tpInitialize.js",
+  "scripts": {},
+  "keywords": [
+    "node-red",
+    "Tibbo-Pi"
+  ],
+  "author": {
+    "name": "CO-works",
+    "email": "tp-dev@co-works.co.jp",
+    "url": "https://tibbo-pi.co-works.co.jp/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cw-tpdev/node-red-contrib-tibbo-pi-p3"
+  },
+  "license": "Apache-2.0"
+}

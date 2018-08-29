@@ -1,0 +1,25 @@
+<script type="text/x-red" data-help-name="Tibbit-#30">
+    <p>#30 温度/湿度センサ</p>
+
+    <h3>Details</h3>
+    <p>湿度計。同時に温度も測定可能。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2330">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dd>
+            none
+        </dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            ・<code>humd</code>: 湿度(%)<br>
+            ・<code>temp</code>: 温度(℃)<br>
+            <p>e.g.</p><pre>{humd: 50, temp: 24}</pre>
+        </dd>
+    </dl>
+</script>

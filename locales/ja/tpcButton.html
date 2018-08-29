@@ -1,0 +1,37 @@
+<script type="text/x-red" data-help-name="tp-button in">
+    <p>Tibbo-Pi ボタン</p>
+
+    <h3>Details</h3>
+    <p>Tibbo-Piのボタンで、押下されたボタンの情報を出力します。</p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>btn</code>: 押下されたボタン(1:RST, 2:MD)</p>
+            <p><code>v</code>: 1:Push, 0:Release</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    RSTがPushされた<br>
+                    <pre>{btn: 1, v: 1}</pre>
+                </li>
+                <li>
+                    RSTがReleaseされた<br>
+                    <pre>{btn: 1, v: 0}</pre>
+                </li>
+                <li>
+                    MDがPushされた<br>
+                    <pre>{btn: 2, v: 1}</pre>
+                </li>
+                <li>
+                    MDがReleaseされた<br>
+                    <pre>{btn: 2, v: 0}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

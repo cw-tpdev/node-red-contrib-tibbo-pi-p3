@@ -1,0 +1,185 @@
+<script type="text/javascript">
+    RED.nodes.registerType('tp-config-serial', {
+        category: 'config',
+        defaults: {
+
+            serialName: { value: "" },
+            hardwareFlow: { value: "off" },
+            seriBaudRate: { value: "9600" },
+            seriDataBits: { value: "8" },
+            seriParity: { value: "none" },
+            seriStartBits: { value: "1" },
+            seriStopBits: { value: "1" },
+            seriSplitInput: { value: "1" },
+            seriOnTheCharactor: { value: "\\n" },
+            seriAfterATimeoutOf: { value: "0", validate: RED.validators.number() },
+            seriIntoFixedLengthOf: { value: "0", validate: RED.validators.number() },
+
+        },
+        label: function () {
+            return this.serialName;
+        },
+        oneditprepare: function () {
+
+            $("#node-config-input-seriSplitInput").on("change", function () {
+                if (this.value === "1") {
+                    $("#node-serial_o").show();
+                    $("#node-serial_a").hide();
+                    $("#node-serial_i").hide();
+                    $("#node-serial_t").hide();
+                }
+                else if (this.value === "2") {
+                    $("#node-serial_o").hide();
+                    $("#node-serial_a").show();
+                    $("#node-serial_i").hide();
+                    $("#node-serial_t").hide();
+                }
+                else if (this.value === "3") {
+                    $("#node-serial_o").hide();
+                    $("#node-serial_a").hide();
+                    $("#node-serial_i").show();
+                    $("#node-serial_t").hide();
+                }
+                else if (this.value === "4") {
+                    $("#node-serial_o").hide();
+                    $("#node-serial_a").hide();
+                    $("#node-serial_i").hide();
+                    $("#node-serial_t").show();
+                }
+            });
+    
+            $("#node-config-input-hardwareFlow").on("change", function () {
+                if (this.value === "on") {
+                    $("#node-serial_p").show();
+                }
+                else if (this.value === "off") {
+                    $("#node-serial_p").hide();
+                }
+            });
+
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="tp-config-serial">
+
+    <div class="form-row">
+        <label for="node-config-input-serialName"><i class="icon-tag"></i> <span data-i18n="tpConfigSerial.label.name"></span></label>
+        <input type="text" id="node-config-input-serialName" placeholder="Name">
+    </div>
+    
+    <div class="form-row">
+        <label for="node-config-input-hardwareFlow"><i class="icon-tag"></i> <span data-i18n="tpConfigSerial.label.hardwareFlow"></span></label>
+        <select type="text" style="width: 100px" id="node-config-input-hardwareFlow">
+            <option value="off" data-i18n="tpConfigSerial.label.hardOff"></option>
+            <option value="on" data-i18n="tpConfigSerial.label.hardOn"></option>
+        </select>
+    </div>
+
+    <!-- serial pin -->
+    <div class="form-row">
+        <label><i class="icon-tag"></i> <span data-i18n="tpConfigSerial.label.pin"></span></label>
+        <div class="form-row">
+            <label> <span data-i18n="tpConfigSerial.label.lineA"></span></label>
+            <label> TX</label>
+        </div>
+        <div class="form-row">
+            <label> <span data-i18n="tpConfigSerial.label.lineB"></span></label>
+            <label> RX</label>
+        </div>
+        <div class="form-row" id="node-serial_p">
+            <div class="form-row">
+                <label> <span data-i18n="tpConfigSerial.label.lineC"></span></label>
+                <label> RTS</label>
+            </div>
+            <div class="form-row">
+                <label> <span data-i18n="tpConfigSerial.label.lineD"></span></label>
+                <label> CTS</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-tips">
+        <span data-i18n="tpConfigSerial.label.pinTips"></span>
+    </div>
+    <br>
+
+    <!-- serial -->
+    <div class="form-row">
+        <label for="node-config-input-baudrate"><i class="icon-tag"></i> <span data-i18n="tpConfigSerial.label.settings"></span></label>
+        <div class="form-row">
+            <label for="node-config-input-seriBaudRate"> <span data-i18n="tpConfigSerial.label.baudRate"></span></label>
+            <select style="width: 100px" id="node-config-input-seriBaudRate">
+                <option value="115200" >115200</option>
+                <option value="57600" >57600</option>
+                <option value="38400" >38400</option>
+                <option value="19200" >19200</option>
+                <option value="14400" >14400</option>
+                <option value="9600" >9600</option>
+                <option value="4800" >4800</option>
+                <option value="2400" >2400</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-config-input-seriDataBits"> <span data-i18n="tpConfigSerial.label.dataBits"></span></label>
+            <select style="width: 100px" id="node-config-input-seriDataBits">
+                <option value="8" >8</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-config-input-seriParity"> <span data-i18n="tpConfigSerial.label.parity"></span></label>
+            <select style="width: 100px" id="node-config-input-seriParity">
+                <option value="none" data-i18n="tpConfigSerial.label.parityNone"></option>
+                <option value="even" data-i18n="tpConfigSerial.label.parityEven"></option>
+                <option value="odd" data-i18n="tpConfigSerial.label.parityOdd"></option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="node-config-input-seriStartBits"> <span data-i18n="tpConfigSerial.label.startBits"></span></label>
+            <select style="width: 100px" id="node-config-input-seriStartBits">
+                <option value="1" >1</option>
+            </select>
+        </div>   
+        <div class="form-row">
+            <label for="node-config-input-seriStopBits"> <span data-i18n="tpConfigSerial.label.stopBits"></span></label>
+            <select style="width: 100px" id="node-config-input-seriStopBits">
+                <option value="1" >1</option>
+            </select>
+        </div>
+        
+        <label for="node-config-input-seriSplitInput"><i class="icon-tag"></i> <span data-i18n="tpConfigSerial.label.input"></span></label>
+        <div class="form-row">
+            <label for="node-config-input-seriSplitInput"> <span data-i18n="tpConfigSerial.label.splitInput"></label>
+            <select style="width: 200px" id="node-config-input-seriSplitInput">
+                <option value="1" data-i18n="tpConfigSerial.label.onTheChar"></option>
+                <option value="2" data-i18n="tpConfigSerial.label.aTimeoutOf"></option>
+                <option value="3" data-i18n="tpConfigSerial.label.intoFixedLengthOf"></option>
+                <option value="4" data-i18n="tpConfigSerial.label.through">through</option>
+            </select>
+        </div>
+        <div class="form-row" id="node-serial_o">
+            <div class="form-row">
+                <label for="node-config-input-seriOnTheCharactor"> </label>
+                <input type="text" style="width: 100px" id="node-config-input-seriOnTheCharactor">
+                <span class="form-tips">
+                    <span data-i18n="tpConfigSerial.label.seriOnTheCharactorTips"></span>
+                </span>
+            </div>
+        </div>
+        <div class="form-row" id="node-serial_a">
+            <div class="form-row">
+                <label for="node-config-input-seriAfterATimeoutOf"> </label>
+                <input type="text" style="width: 100px" id="node-config-input-seriAfterATimeoutOf"> ms
+            </div>
+        </div>
+        <div class="form-row" id="node-serial_i">
+            <div class="form-row">
+                <label for="node-config-input-seriIntoFixedLengthOf"> </label>
+                <input type="text" style="width: 100px" id="node-config-input-seriIntoFixedLengthOf"> chars
+            </div>
+        </div>
+        <div class="form-row" id="node-serial_t">
+        </div>
+    </div>
+
+</script>

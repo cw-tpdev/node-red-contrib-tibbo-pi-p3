@@ -1,0 +1,28 @@
+<script type="text/x-red" data-help-name="Tibbit-#14 out">
+    <p>#14 4chアナログ入力(12bitDAC)</p>
+
+    <h3>Details</h3>
+    <p>4chのDAC。-10V～+10V出力、分解能12bit。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2314">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <p><code>ch</code>: 1 - 4</p>
+            <p><code>v</code>: 0(-10V) - 4095(+10V)</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    ch:1 4095<br>
+                    <pre>[{ch: 1, v: 4095}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+</script>

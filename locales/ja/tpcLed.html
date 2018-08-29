@@ -1,0 +1,33 @@
+<script type="text/x-red" data-help-name="tp-LED out">
+    <p>Tibbo-Pi LED</p>
+
+    <h3>Details</h3>
+    <p>Tibbo-PiのLEDを点灯・消灯します。</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>no</code>: LED番号 (1~4)</p>
+            <p><code>v</code>: 1:点灯, 0:消灯</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    LED1を点灯させる<br>
+                    <pre>{no: 1, v: 1}</pre>
+                </li>
+                <li>
+                    LED1を消灯させる<br>
+                    <pre>{no: 1, v: 0}</pre>
+                </li>
+                <li>
+                    LED2を点灯させる<br>
+                    <pre>{no: 2, v: 1}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

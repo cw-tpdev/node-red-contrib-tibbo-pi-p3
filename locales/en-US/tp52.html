@@ -1,0 +1,30 @@
+<script type="text/x-red" data-help-name="Tibbit-#52">
+    <p>#52 Four-channel isolated +/-10V ADC</p>
+
+    <h3>Details</h3>
+    <p>Four-channel isolated ADC with -10V ~ +10V range.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2352">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>ch</code>: 1 - 4</p>
+            <p>e.g.</p><pre>[{ch: 1}]</pre>
+        </dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <p>[Voltage 16 bit value,Correction value]</p>
+            <p>e.g.</p><pre>[[1,2]]</pre>
+        </dd>
+    </dl>
+
+</script>

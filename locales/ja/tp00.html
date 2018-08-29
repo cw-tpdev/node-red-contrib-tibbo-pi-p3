@@ -1,0 +1,217 @@
+<script type="text/x-red" data-help-name="Tibbit-#00">
+    <p>#00 ダイレクトI/O</p>
+
+    <h3>Details</h3>
+
+    <p>#00_1 4chダイレクトI/O</p>
+    <p>スロットの4本の信号線を直接外部に接続したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_1">Tibbit Blocks</a></p>
+    
+    <p>#00_2 3chダイレクトI/O+GND</p>
+    <p>スロットの3本の信号線を直接外部に接続し、外部信号の1本はGNDに接続したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_2">Tibbit Blocks</a></p>
+
+    <p>#00_3 2chダイレクトI/O+5V+GND</p>
+    <p>スロットの2本の信号線を直接外部に接続し、外部信号の1本はGNDに接続、1本に5V出力したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_3">Tibbit Blocks</a></p>
+
+    <h3>GPIO</h3>
+    <b>Inputs</b>
+    <p>※各ラインの設定により異なります</p>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <ul>
+                <li>
+                    IN<br>
+                    ・<code>line</code>: ライン<br>
+                    <p>e.g.</p><pre>[{line: 'A'}]</pre>
+                </li>
+                <li>
+                    IN_Analog<br>
+                    ・<code>line</code>: ライン<br>
+                    <p>e.g.</p><pre>[{line: 'A'}]</pre>
+                </li>
+                <li>
+                    OUT(TTL/オープンドレイン)<br>
+                    ・<code>line</code>: ライン<br>
+                    ・<code>v</code>: 値<br>
+                    <p>e.g.</p><pre>[{line: 'A', v: 1}]</pre>
+                </li>
+                <li>
+                    IN_OUT<br>
+                    ・<code>io</code>: IN/OUT(TTL)/OUT_OD(オープンドレイン)<br>
+                    ・<code>line</code>: ライン<br>
+                    ・<code>v</code>: 値<br>
+                    <p>e.g.</p><pre>[{io:'IN', line: 'A'}, {io:'OUT', line: 'A', v: 1}, {io:'OUT_OD', line: 'A', v: 1}]</pre><br>
+
+                    in/outの変更<br>
+                    ・<code>mode</code>: ch<br>
+                    ・<code>io</code>: IN/OUT(TTL)/OUT_OD(オープンドレイン)<br>
+                    ・<code>line</code>: ライン<br>
+                    <p>e.g.</p><pre>[{mode:'ch', io:'OUT', line: 'A'}]</pre><br>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <p>※各ラインの設定により異なります</p>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <ul>
+                <li>
+                    IN: 0 or 1
+                    <p>配列で出力</p>
+                    <p>e.g.</p><pre>[1]</pre>
+                </li>
+                <li>
+                    IN_Analog: 0 - 255
+                    <p>配列で出力</p>
+                    <p>e.g.</p><pre>[1]</pre>
+                </li>
+                <li>
+                    OUT(TTL/オープンドレイン): none
+                    <p>e.g.</p><pre>[]</pre>
+                </li>
+                <li>
+                    IN_OUT: 0 or 1
+                    <p>INの分、配列で出力</p>
+                    <p>e.g.</p><pre>[1]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+    <h3>I2C</h3>
+    <b>Inputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <ul>
+                <li>
+                    Write<br>
+                    ・<code>act</code>: w<br>
+                    ・<code>add</code>: address<br>
+                    ・<code>cmd</code>: command(optional)<br>
+                    ・<code>v</code>: value
+                </li>
+                <li>
+                    Read<br>
+                    ・<code>act</code>: r<br>
+                    ・<code>add</code>: address<br>
+                    ・<code>cmd</code>: command(optional)<br>
+                    ・<code>len</code>: size
+                </li>
+            </ul>
+            <p>e.g.</p><pre>[{act: 'w', add: 0x23, cmd: 0x00, v: [0x00]}, {act: 'r', add: 0x23, cmd: 0x00, len:2}]</pre>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <p>Readの分、配列で出力</p>
+            <p>e.g.</p><pre>[[0x00]]</pre>
+        </dd>
+    </dl>
+
+    <h3>SPI</h3>
+    <b>Inputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <p>
+            ・<code>add</code>: address<br>
+            ・<code>v</code>: value
+            </p>
+            <p>e.g.</p><pre>[{add: 0x80, v: [0x00]}, {add: 0x80, v: [0x00]}]</pre>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <p>配列で出力</p>
+            <p>e.g.</p><pre>[[0x00]]</pre>
+        </dd>
+    </dl>
+
+    <h3>Serial</h3>
+    <b>Inputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">buffer object</span>
+        </dt>
+        <dd>
+            <p>e.g.</p><pre>Buffer.from([0x00]);</pre>
+            <p>e.g.</p><pre>Buffer.from("test");</pre>
+            <p>※機器へのOUTを入力</p>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dd>
+            none
+            <p>※機器からのINは「Tibbit-#00 in」で取得</p>
+        </dd>
+    </dl>
+
+</script>
+
+<script type="text/x-red" data-help-name="Tibbit-#00 in">
+    <p>#00 ダイレクトI/O</p>
+
+    <h3>Details</h3>
+
+    <p>#00_1 4chダイレクトI/O</p>
+    <p>スロットの4本の信号線を直接外部に接続したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_1">Tibbit Blocks</a></p>
+    
+    <p>#00_2 3chダイレクトI/O+GND</p>
+    <p>スロットの3本の信号線を直接外部に接続し、外部信号の1本はGNDに接続したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_2">Tibbit Blocks</a></p>
+
+    <p>#00_3 2chダイレクトI/O+5V+GND</p>
+    <p>スロットの2本の信号線を直接外部に接続し、外部信号の1本はGNDに接続、1本に5V出力したI/O用のブロック。</p>
+    <p>参照:<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2300_3">Tibbit Blocks</a></p>
+
+    <h3>GPIO</h3>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <code>line</code>(ライン), <code>v</code>(値)<br>
+            <p>e.g.</p><pre>{line: 'A', v: 1}</pre>
+        </dd>
+    </dl>
+
+    <h3>Serial</h3>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">buffer object</span>
+        </dt>
+        <dd>
+            <p>※機器からのINを出力</p>
+        </dd>
+    </dl>
+
+</script>

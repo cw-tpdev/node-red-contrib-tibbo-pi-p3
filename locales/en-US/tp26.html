@@ -1,0 +1,50 @@
+<script type="text/x-red" data-help-name="Tibbit-#26">
+    <p>#26 IR code processor</p>
+
+    <h3>Details</h3>
+    <p>Records and plays back infrared commands (codes) of conventional IR remote controls.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2326">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <ul>
+                <li>
+                    Start recording.<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'w'}</pre>
+                </li>
+                <li>
+                    Acquire recorded data.<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'r'}</pre>
+                </li>
+                <li>
+                    Recording data set.<br>
+                    <p>・<code>data</code>: Data when acquiring recorded data.</p>
+                    <p>e.g.</p>
+                    <pre>{act: 'set', data:'...'}</pre>
+                </li>
+                <li>
+                    Recorded data play.<br>
+                    <p>e.g.</p>
+                    <pre>{act: 'play'}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+    <b>Outputs</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">string</span>
+        </dt>
+        <dd>
+            <p>Data when acquiring recorded data.</p>
+            <p>e.g.</p><pre>...</pre>
+        </dd>
+    </dl>
+
+</script>

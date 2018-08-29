@@ -1,0 +1,51 @@
+<script type="text/x-red" data-help-name="Tibbit-#54">
+    <p>#54 4ch非絶縁ドライ接点入力</p>
+
+    <h3>Details</h3>
+
+    <p>ドライ接点入力4ch。入力端子とグランドの間に外部接点を取り付ける。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2354">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            IN: <code>line</code>(ライン)を指定<br>
+            <p>e.g.</p><pre>[{line: 'A'}]</pre>
+        </dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            1:HIGH, 0:LOW
+            <p>配列で出力</p>
+            <p>e.g.</p><pre>[1]</pre>
+        </dd>
+    </dl>
+</script>
+
+<script type="text/x-red" data-help-name="Tibbit-#54 in">
+    <p>#54 4ch非絶縁ドライ接点入力</p>
+
+    <h3>Details</h3>
+    
+    <p>ドライ接点入力4ch。入力端子とグランドの間に外部接点を取り付ける。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2354">Tibbit Blocks</a></p>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            IN_Edge: <code>line</code>(ライン), <code>v</code>(1:HIGH, 0:LOW)<br>
+            <p>e.g.</p><pre>{line: 'A', v: 1}</pre>
+        </dd>
+    </dl>
+</script>

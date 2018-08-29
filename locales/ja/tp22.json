@@ -1,0 +1,25 @@
+﻿{
+    "tp22": {
+        "label": {
+            "sensor": "センサー"
+        }
+    },
+    "common": {
+		"name": "名前",
+		"tpSlot": "スロット",
+        "status": {
+            "connected": "TP接続済",
+            "tryConnecting": "TP接続中...",
+            "disconnected": "TP切断",
+			"disabled": "無効"
+        },
+        "other": "その他",
+        "host": "ホスト",
+        "connectedStatus": "接続状態",
+        "connectedStatusPtn": {
+            "start": "接続する",
+            "stop": "接続しない",
+            "disabled": "無効"
+        }
+    }
+}

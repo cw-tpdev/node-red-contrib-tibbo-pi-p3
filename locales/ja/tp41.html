@@ -1,0 +1,53 @@
+<script type="text/x-red" data-help-name="Tibbit-#41">
+    <p>#41 8ch I/Oエキスパンダ</p>
+
+    <h3>Details</h3>
+    <p>シリアル・パラレル変換による8chポート。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2341">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <ul>
+                <li>
+                    IN/OUT設定<br>
+                    ・<code>act</code>: io<br>
+                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>v</code>: 1:出力, 0:入力
+                </li>
+                <li>
+                    Pullup設定(入力のみ)<br>
+                    ・<code>act</code>: pup<br>
+                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>v</code>: 1:有効, 0:無効
+                </li>
+                <li>
+                    出力状態をセット<br>
+                    ・<code>act</code>: set<br>
+                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>v</code>: 1:HIGH, 0:LOW
+                </li>
+                <li>
+                    状態を取得<br>
+                    ・<code>act</code>: get<br>
+                    ・<code>line</code>: 0 - 7<br>
+                </li>      
+            </ul>
+            <p>e.g.</p><pre>[{act: 'io', line: 1, v: 1}, {act: 'pup', line: 1, v: 1}, {act: 'set', line: 1, v: 1}, {act: 'get', line: 1}]</pre>
+        </dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <p>getの分、配列で出力</p>
+            <p>e.g.</p><pre>[1]</pre>
+        </dd>
+    </dl>
+</script>

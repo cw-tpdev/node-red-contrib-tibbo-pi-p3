@@ -1,0 +1,28 @@
+<script type="text/x-red" data-help-name="Tibbit-#17 out">
+    <p>#17 3chPWM出力(電力外部供給型)</p>
+
+    <h3>Details</h3>
+    <p>3chのPWM。電力は外部から供給必要。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2317">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p>以下のオブジェクトを配列で入力</p>
+            <p><code>ch</code>: ch(1 - 3)</p>
+            <p><code>period</code>: 1周期長さ 0.125[us]～2048[us]</p>
+            <p><code>pulse_width</code>: パルス幅 0～0.03125[us]～period</p>
+
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    <pre>[{ch: 1, period: 1000, pulse_width: 100}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+</script>

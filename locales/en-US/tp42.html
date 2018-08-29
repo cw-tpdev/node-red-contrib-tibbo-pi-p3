@@ -1,0 +1,43 @@
+<script type="text/x-red" data-help-name="Tibbit-#42">
+    <p>#42 RTC and NVRAM with backup</p>
+
+    <h3>Details</h3>
+    <p>Real-time clock and non-volatile memory with backup battery and interrupt output.</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2342">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>ctrl</code>: <br>
+                1: Get the date Tibbit has.<br>
+                2: Set the date in Tibbit.<br>
+            </p>
+            <p><code>v</code>: If ctrl is 2, set the date. (yyyy/MM/dd HH:mm:ss)</p>
+
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    Get the date<br>
+                    <pre>{ctrl: 1}</pre>
+                </li>
+                <li>
+                    Set the date<br>
+                    <pre>{ctrl: 2, v: '2018/12/31 23:59:30'}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">string</span>
+        </dt>
+        <dd>
+            <p>If ctrl of Inputs is 1, set date.</p>
+            <p>If ctrl of Inputs is 2, date.</p>
+        </dd>
+    </dl>
+</script>

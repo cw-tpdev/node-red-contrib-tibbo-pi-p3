@@ -1,0 +1,30 @@
+<script type="text/x-red" data-help-name="Tibbit-#13">
+    <p>#13 4chアナログ入力(12bitADC)</p>
+
+    <h3>Details</h3>
+    <p>4chのADC。-10V～+10V入力、分解能12bit。</p>
+    <p>参照：<a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2313">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>ch</code>: 1 - 4</p>
+            <p>e.g.</p><pre>[{ch: 1}]</pre>
+        </dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            <p>配列で出力</p>
+            <p>0(-10V) - 4096(+10V)</p>
+            <p>e.g.</p><pre>[1]</pre>
+        </dd>
+    </dl>
+</script>

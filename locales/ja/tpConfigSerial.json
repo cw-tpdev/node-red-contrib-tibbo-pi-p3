@@ -1,0 +1,37 @@
+﻿{
+	"tpConfigSerial": {
+		"label": {
+            "name": "名前",
+			"serial": "シリアル",
+			"baudRate": "ボーレート",
+			"buffer": "バッファ",
+			"communication": "通信",
+			"dataBits": "データビット",
+			"input": "受信",
+			"lineA": "ラインA",
+			"lineB": "ラインB",
+			"lineC": "ラインC",
+			"lineD": "ラインD",
+			"mode": "モード",
+			"parity": "パリティ",
+			"parityNone": "なし",
+			"parityEven": "偶数",
+			"parityOdd": "奇数",
+			"pin": "ピン",
+			"settings": "設定",
+			"speed": "スピード",
+			"splitInput": "受信単位",
+			"startBits": "スタートビット",
+			"stopBits": "ストップビット",
+			"onTheChar": "文字区切り",
+			"aTimeoutOf": "時間区切り",
+			"intoFixedLengthOf": "受信長区切り",
+			"through": "区切らない",
+			"hardwareFlow": "ハードウェアフロー",
+			"hardOff": "無",
+			"hardOn": "有",
+			"pinTips": "使用できるラインはTibbitにより異なります。",
+			"seriOnTheCharactorTips": "1バイトのみ"
+		}
+	}
+}

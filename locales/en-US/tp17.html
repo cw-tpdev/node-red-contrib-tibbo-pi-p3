@@ -1,0 +1,27 @@
+<script type="text/x-red" data-help-name="Tibbit-#17 out">
+    <p>#17 Three PWMs with power outputs</p>
+
+    <h3>Details</h3>
+    <p>Three PWMs with power outputs (the power must be supplied externally).</p>
+    <p>See <a href="http://tibbo.com/store/tps/tibbits.html#?filter=%2317">Tibbit Blocks</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of objects</span>
+        </dt>
+        <dd>
+            <p><code>ch</code>: ch(1 - 3)</p>
+            <p><code>period</code>: 0.125[us]～2048[us]</p>
+            <p><code>pulse_width</code>: 0～0.03125[us]～period</p>
+
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    <pre>[{ch: 1, period: 1000, pulse_width: 100}]</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+</script>
