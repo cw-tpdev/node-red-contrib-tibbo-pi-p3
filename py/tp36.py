@@ -54,6 +54,7 @@ class Tp36:
             send_data.append(
                 {"act": "w", "add": self.i2c_addr, "cmd": 0x2d, "v": [0x08]})
             self.tp00.send(json.dumps(send_data))
+            time.sleep(0.1)
 
             send_data = []
             send_data.append(

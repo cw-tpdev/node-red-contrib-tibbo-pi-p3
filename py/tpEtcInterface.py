@@ -18,7 +18,7 @@ class TpEtcInterface:
         # #22
         self.__inter = board_inter
         self.__tp22_wait_max_ms = 100
-        self.__tp22_retry_num = 5
+        self.__tp22_retry_num = 10
         self.__RTD_A = 3.9080e-3
         self.__RTD_B = -5.870e-7
 
@@ -55,12 +55,12 @@ class TpEtcInterface:
                 c_ret, rtd = self.__inter.tp22_temp(slot)
                 #print('tp22_get_temp', c_ret, rtd)
                 if rtd % 2 == 1: # c_retエラー時は、rtd=-999999で戻るので、このチェックでOK
-                    time.sleep(0.1)
+                    time.sleep(0.2)
                     continue
                 else: 
                     break
             else:
-                raise ValueError('Tibbit #22 RTD retry error! ' + str(rtd))
+                raise ValueError('Tibbit #22 RTD retry error! ' + str(c_ret) + ', ' + str(rtd))
             temp = self.__tp22_temp(rtd, pt_kind)
             if temp < -240: 
                 time.sleep(0.1)
@@ -261,57 +261,3 @@ class TpEtcInterface:
         if v0 & 0x80: ret = -ret
         return ret
 
-# main部 -----------------------------------------------------------------
-
-if __name__ == '__main__':
-    from tpConfig import TpConfig
-    tp_config = TpConfig()
-    inter = TpBoardInterface(tp_config.get_settings(), '')
-    #inter = TpBoardInterface('', '')
-    etc = TpEtcInterface(inter)
-    time.sleep(2)
-
-    # #22 test
-    if True:
-        #inter.board.dbg_pic_reg_print(0x1d, 3)
-        etc.tp22_init('S07')
-        while True:
-            temp = etc.tp22_get_temp('S07', 'PT100')
-            print(temp)
-            time.sleep(0.5)
-
-    # #52 test
-    if False:
-        slot = 'S03'
-        etc.tp52_init(slot)
-        print(etc.tp52_get_correct(slot))
-        while True:
-            print(etc.tp52_get_volt(slot, 'CH1'))
-            print(etc.tp52_get_volt(slot, 'CH2'))
-            print(etc.tp52_get_volt(slot, 'CH3'))
-            print(etc.tp52_get_volt(slot, 'CH4'))
-            print('')
-            time.sleep(0.5)
-
-    # #26 Reset & Write etc...
-    if False:
-    #if True:
-        #etc.tpFPGA_write('S04', './IR_Remote_bitmap.bin')
-        #inter.tp26_start_record('S04')
-        #print(inter.tp26_get_record('S04'))
-        inter.tp26_start_play('S04')
-
-    # #26 put play
-    #if True:
-    if False:
-        with open('tp26_record.bin', 'rb') as f:
-            vals = f.read()
-        inter.tp26_put_play('S04', vals)
-
-    while True:
-        #print(etc.tp22_get_ver('S06'))
-        begin_time = time.time()
-        print(etc.tp22_get_temp('S01', 'PT100'))
-        end_time = time.time()
-        print('             ', (end_time - begin_time)*1000, 'ms') 
-        time.sleep(0.5)

@@ -32,17 +32,12 @@ class Tp41:
         send_data.append(
             {"act": "w", "add": self.i2c_addr, "cmd": 0x00, "v": [0xFF]})
         send_data.append(
-            {"act": "r", "add": self.i2c_addr, "cmd": 0x00, len: 1})
-
+            {"act": "r", "add": self.i2c_addr, "cmd": 0x00, "len": 1})
         send_data.append(
             {"act": "w", "add": self.i2c_addr, "cmd": 0x01, "v": [0x0]})
         send_data.append(
-            {"act": "r", "add": self.i2c_addr, "cmd": 0x01, len: 1})
-
-        _result = self.tp00.send(json.dumps(send_data))
-        result_data = json.loads(_result.decode())
-        # TODO 0xFFと0x0が取れるか
-        print(result_data)
+            {"act": "r", "add": self.i2c_addr, "cmd": 0x01, "len": 1})
+        self.tp00.send(json.dumps(send_data))
 
         # 初期化
         send_data = []
@@ -61,42 +56,42 @@ class Tp41:
             if act == 0:
                 return data | 0x80
             else:
-                return data | 0x7F
+                return data & 0x7F
         elif bit == 6:
             if act == 0:
                 return data | 0x40
             else:
-                return data | 0xBF
+                return data & 0xBF
         elif bit == 5:
             if act == 0:
                 return data | 0x20
             else:
-                return data | 0xDF
+                return data & 0xDF
         elif bit == 4:
             if act == 0:
                 return data | 0x10
             else:
-                return data | 0xEF
+                return data & 0xEF
         elif bit == 3:
             if act == 0:
                 return data | 0x08
             else:
-                return data | 0xF7
+                return data & 0xF7
         elif bit == 2:
             if act == 0:
                 return data | 0x04
             else:
-                return data | 0xFB
+                return data & 0xFB
         elif bit == 1:
             if act == 0:
                 return data | 0x02
             else:
-                return data | 0xFD
+                return data & 0xFD
         elif bit == 0:
             if act == 0:
                 return data | 0x01
             else:
-                return data | 0xFE
+                return data & 0xFE
 
         raise ValueError('Tibbit #41 bit access error!')
 
@@ -112,8 +107,8 @@ class Tp41:
 
         for data in datas:
 
-            # line
-            line = data['line']
+            # GP
+            gp = data['gp']
 
             if data['act'] == 'io':
                 # 入出力の設定
@@ -127,7 +122,7 @@ class Tp41:
                 v = data['v']
 
                 value = result_data[0][0]
-                nval = self.__bit_access(value, line, v)
+                nval = self.__bit_access(value, gp, v)
 
                 send_data = []
                 send_data.append(
@@ -146,7 +141,10 @@ class Tp41:
                 v = data['v']
 
                 value = result_data[0][0]
-                nval = self.__bit_access(value, line, v)
+                if v == 1:
+                    nval = self.__bit_access(value, gp, 0)
+                else:
+                    nval = self.__bit_access(value, gp, 1)
 
                 send_data = []
                 send_data.append(
@@ -165,10 +163,10 @@ class Tp41:
                 v = data['v']
 
                 value = result_data[0][0]
-                if v == 1:
-                    nval = self.__bit_access(value, line, 0)
+                if v == 0:
+                    nval = self.__bit_access(value, gp, 1)
                 else:
-                    nval = self.__bit_access(value, line, 1)
+                    nval = self.__bit_access(value, gp, 0)
 
                 send_data = []
                 send_data.append(
@@ -185,21 +183,21 @@ class Tp41:
                 result_data = json.loads(_result.decode())
                 value = result_data[0][0]
 
-                if line == 7:
+                if gp == 7:
                     tmp = 0x80
-                elif line == 6:
+                elif gp == 6:
                     tmp = 0x40
-                elif line == 5:
+                elif gp == 5:
                     tmp = 0x20
-                elif line == 4:
+                elif gp == 4:
                     tmp = 0x10
-                elif line == 3:
+                elif gp == 3:
                     tmp = 0x08
-                elif line == 2:
+                elif gp == 2:
                     tmp = 0x04
-                elif line == 1:
+                elif gp == 1:
                     tmp = 0x02
-                elif line == 0:
+                elif gp == 0:
                     tmp = 0x01
 
                 if value & tmp:

@@ -199,10 +199,12 @@ class TpBoardInterface:
         slot_num = tpUtils.slot_str_to_int(slot)
         self.i2c_lock.acquire(1)
         try:
-            c_ret, data = self.__board.tp22_temp(slot_num)
+            self.__board.i2c_select(slot_num)
+            c_ret, data = self.__board.tp22_temp()
         except:
             raise
         finally:
+            self.__board.i2c_select() # slot選択解除
             self.i2c_lock.release()
         return c_ret, data
 
@@ -215,10 +217,12 @@ class TpBoardInterface:
         slot_num = tpUtils.slot_str_to_int(slot)
         self.i2c_lock.acquire(1)
         try:
-            data = self.__board.i2c_read_tp22(slot_num, num)
+            self.__board.i2c_select(slot_num)
+            data = self.__board.i2c_read_tp22(num)
         except:
             raise
         finally:
+            self.__board.i2c_select() # slot選択解除
             self.i2c_lock.release()
         return data
 
@@ -231,10 +235,12 @@ class TpBoardInterface:
         slot_num = tpUtils.slot_str_to_int(slot)
         self.i2c_lock.acquire(1)
         try:
-            self.__board.i2c_write_tp22(slot_num, val)
+            self.__board.i2c_select(slot_num)
+            self.__board.i2c_write_tp22(val)
         except:
             raise
         finally:
+            self.__board.i2c_select() # slot選択解除
             self.i2c_lock.release()
 
     def i2c_write_tp22_spi(self, slot, addr, val):
@@ -247,10 +253,12 @@ class TpBoardInterface:
         slot_num = tpUtils.slot_str_to_int(slot)
         self.i2c_lock.acquire(1)
         try:
+            self.__board.i2c_select(slot_num)
             self.__board.i2c_write_tp22(slot_num, val, addr)
         except:
             raise
         finally:
+            self.__board.i2c_select() # slot選択解除
             self.i2c_lock.release()
         return
 
@@ -712,189 +720,4 @@ class TpBoardInterface:
                     self.__board.rp_buzzer(0)
                     time.sleep(self.__buzzer_time_off)
                     self.__buzzer_on_flg = True
-
-# main部 -----------------------------------------------------------------
-
-if __name__ == '__main__':
-
-    from tpConfig import TpConfig
-    tp_config = TpConfig()
-    inter = TpBoardInterface(tp_config.get_settings(), '')
-
-    # gpio_in_out_init test
-    if False:
-        inter.gpio_in_out_init('S03', 'D', 4)
-
-    # #26 Reset & Write etc...
-    if False:
-    #if True:
-        #inter.tpFPGA_write('S04', './IR_Remote_bitmap.bin')
-        #inter.tp26_start_record('S04')
-        print(inter.tp26_get_record('S04'))
-        #inter.tp26_start_play('S04')
-
-    # #26 put play
-    #if True:
-    if False:
-        with open('tp26_record.bin', 'rb') as f:
-            vals = f.read()
-        inter.tp26_put_play('S04', vals)
-
-    # I2C Test
-    # #16,17 Block
-    if False:
-        inter.i2c_block_write('S06', 0x03, 0x00, [0, 1])
-
-    while False:
-        time.sleep(5)
-        inter.gpio_write('S06', 'A', '0')
-        inter.gpio_write('S06', 'B', '0')
-        inter.gpio_write('S06', 'C', '0')
-        inter.gpio_write('S06', 'D', '0')
-        inter.gpio_write('S08', 'A', '0')
-        inter.gpio_write('S08', 'B', '0')
-        inter.gpio_write('S08', 'C', '0')
-        inter.gpio_write('S08', 'D', '0')
-        #time.sleep(0.5)
-
-        inter.gpio_write('S06', 'A', '0')
-        inter.gpio_write('S06', 'B', '1')
-        #time.sleep(0.1)
-        inter.gpio_write('S06', 'A', '1')
-        inter.gpio_write('S06', 'B', '0')
-        #time.sleep(0.1)
-        inter.gpio_write('S06', 'C', '0')
-        inter.gpio_write('S06', 'D', '1')
-        #time.sleep(0.1)
-        inter.gpio_write('S06', 'C', '1')
-        inter.gpio_write('S06', 'D', '0')
-        #time.sleep(0.1)
-
-        inter.gpio_write('S08', 'A', '0')
-        inter.gpio_write('S08', 'B', '1')
-        #time.sleep(0.1)
-        inter.gpio_write('S08', 'A', '1')
-        inter.gpio_write('S08', 'B', '0')
-        #time.sleep(0.1)
-        inter.gpio_write('S08', 'C', '0')
-        inter.gpio_write('S08', 'D', '1')
-        #time.sleep(0.1)
-        inter.gpio_write('S08', 'C', '1')
-        inter.gpio_write('S08', 'D', '0')
-        #time.sleep(0.1)
-
-    if False:
-        inter.serial_write('S05', [0xA7,0x00])
-        time.sleep(4)
-        inter.serial_write('S05', [0xA7,0x01])
-
-    # Tibbit #22,29 同時テスト
-    while False:
-        slot = 'S06'
-        inter.gpio_write(slot, 'C', '0')
-        inter.gpio_write(slot, 'C', '1')
-        ret = inter.tp22_temp(slot)
-        print(ret)
-        ret = inter.i2c_read('S05', 0x18, 0x05, 2)
-        val = (ret[0] & 0x0F) * 16 + ret[1] / 16
-        print(ret, val)
-        #time.sleep(1)
-
-    # Tibbit#22 Temp
-    if True:
-        inter.board.dbg_pic_reg_print(0x1d, 3)
-        while True:
-            ret = inter.tp22_temp('S07')
-            print(ret)
-            time.sleep(0.5)
-    # Tibbit#22 Version
-    if False:
-        inter.i2c_write_tp22('S06', 0x03)
-        ret = inter.i2c_read_tp22('S06', 16)
-        print(ret)
-
-    # Buzzer
-    if False:
-        inter.rp_buzzer(1000, 1)
-        while True:
-            pass
-
-    # I2C
-    while False:
-        # Tibbit #29 Temperature
-        ret = inter.i2c_read('S05', 0x18, 0x05, 2)
-        val = (ret[0] & 0x0F) * 16 + ret[1] / 16
-        print(ret, val)
-        #time.sleep(1)
-    while False:
-        # Tibbit #28 Light
-        inter.i2c_write('S10', 0x23, [0x23])
-        time.sleep(0.2)
-        print(inter.i2c_read('S10', 0x23, 0x00, 2))
-        inter.i2c_write('S10', 0x23, [0])
-        time.sleep(1)
-    while False: 
-        # Tibbit #30 Humidity
-        print(inter.i2c_read('S06', 0x27, 0x00, 4))
-        time.sleep(0.4) # 0.4だと値更新される。0.5だとされない。
-    while False: 
-        # Tibbit #22 RTD
-        inter.i2c_write('S08', 0x0D, [0])
-        time.sleep(1)
-        #print(inter.i2c_read('S08', 0x0D, 0x1B, 2))
-        time.sleep(1)
-
-    # GPIO(SPI) Out
-    while False:
-        """
-        inter.gpio_write('S09', 'A', '0')
-        time.sleep(0.5)
-        inter.gpio_write('S09', 'A', '1')
-        """
-        time.sleep(0.05)
-        print(inter.gpio_read('S08', 'A'))
-
-    # GPIO(SPI) In
-    while False:
-        print(inter.gpio_read('S09', 'A'), inter.gpio_read('S09', 'B'))
-        print(inter.gpio_read('S09', 'C'), inter.gpio_read('S09', 'D'))
-        print('')
-        time.sleep(0.1)
-
-    # GPIO(SPI) Edge
-    if False: # __gpio_event_callback のprintで確認
-        inter.gpio_event_init(9, 1)
-        inter.gpio_event_init(9, 2)
-        inter.gpio_event_init(9, 3)
-        inter.gpio_event_init(9, 4)
-        inter.board.dbg_pic_reg_print(0x00, 0x3D)
-        while True:
-            time.sleep(0.1)
-
-    # SPI
-    while False:
-        print(inter.spi_access('S01', 0x00, [0,1,2,3,4,5]))
-        time.sleep(1)
-
-    # Analog GPIO with SPI
-    while False:
-        slot = 'S08'
-        print('start')
-        print(inter.analog_read(slot, 'A'))
-        print(inter.analog_read(slot, 'B'))
-        print(inter.analog_read(slot, 'C'))
-        print(inter.analog_read(slot, 'D'))
-        time.sleep(1)
-
-    # Serial with SPI
-    if False:
-        inter.board.dbg_pic_reg_print(0x00, 0x3D)
-        while True:
-            inter.serial_write('S09', [0x31,0x32,0x33,0x34,0x35])
-            time.sleep(0.2)
-            inter.board.dbg_pic_reg_print(0x69, 1) # エラー情報
-            inter.board.dbg_pic_reg_print(0x6E, 1) # 受信バッファ
-            inter.board.dbg_pic_reg_print(0x73, 1) # 送信バッファ
-            print('')
-            time.sleep(0.1)
 

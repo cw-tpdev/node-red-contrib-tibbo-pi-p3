@@ -2,7 +2,8 @@
     "initialize": {
         "label": {
 			"name" : "Name",
-			"make" : "Create a flow configuration file. (config.json)"
+            "make" : "Create a flow configuration file. (config.json)",
+            "connect" : "Allow external connections."
 		},
         "status": {
             "started": "TP Started",

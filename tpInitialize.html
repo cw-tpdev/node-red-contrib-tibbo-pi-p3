@@ -4,7 +4,8 @@
         color: '#23bc82',
         defaults: {
             name: { value: "" },
-            make: { value: "true" }
+            make: { value: true },
+            connect: { value: false }
         },
         inputs: 0,
         outputs: 0,
@@ -24,5 +25,10 @@
         <label>&nbsp;</label>
         <input type="checkbox" id="node-input-make" style="display:inline-block; width:auto; vertical-align:top;">
         <label for="node-input-make" style="width:70%;"> <span data-i18n="initialize.label.make"></span></label>
+    </div>
+    <div class="form-row">
+        <label>&nbsp;</label>
+        <input type="checkbox" id="node-input-connect" style="display:inline-block; width:auto; vertical-align:top;">
+        <label for="node-input-connect" style="width:70%;"> <span data-i18n="initialize.label.connect"></span></label>
     </div>
 </script>

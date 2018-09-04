@@ -94,7 +94,8 @@ class Tp31:
         tmp_data["line"] = 'D'
         send_data.append(tmp_data)
         recv_data = self.rst_tcp_client.send(json.dumps(send_data))
-        return recv_data[0]
+        result_data = json.loads(recv_data.decode())
+        return result_data[0]
 
     def send(self, msg):
         """

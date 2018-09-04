@@ -6,9 +6,9 @@ gTpEnv = True # 環境チェック, TrueでTibbo-Piとみなす
 import os, sys
 import _thread as thread
 import time
+import ctypes
 try:
     import RPi.GPIO as GPIO
-    import subprocess
 except:
     gTpEnv = False
 import tpUtils
@@ -16,8 +16,9 @@ import tpUtils
 # 定数宣言 ---------------------------------------------------------------
 SLOT_SETTING_NONE = 0x00
 SLOT_SETTING_SERI = 0x01
-SLOT_SETTING_I2C  = 0x02
-SLOT_SETTING_SPI  = 0x03
+SLOT_SETTING_SERI_FLOW = 0x02
+SLOT_SETTING_I2C  = 0x03
+SLOT_SETTING_SPI  = 0x04
 LINE_SETTING_NONE     = 0
 LINE_SETTING_A_IN     = 1
 LINE_SETTING_D_IN     = 2
@@ -46,14 +47,6 @@ class TpP3Interface():
             # ハードウェア設定
             GPIO.setmode(GPIO.BCM)
             self.__path = os.path.dirname(os.path.abspath(__file__))
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/spi_access'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/i2c_read_tp22'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/i2c_write_tp22'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/tp22_temp'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/end_tp22.sh'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/i2c_read'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/i2c_write'])
-            subprocess.call(['/bin/sh', self.__path + '/c/ch.sh', self.__path + '/c/fpga_lattice'])
 
             # パラメータ定義
             self.__gpio_in_edge_table = []
@@ -72,19 +65,25 @@ class TpP3Interface():
             self.__pic_spi_wait_ms = 0
 
             # Tibbit#22用設定
-            self.__tp22_addr = '0x0D'
+            self.__tp22_addr = 0x0D
             self.__tp22_kbaud = 15
 
             # i2c設定
             self.__i2c_kbaud_list = [100] * 11 # 0 = slot未選択時, default 100Kbps
             self.__i2c_kbaud = 0 # アクセス時書き換え用
 
-            # P3用設定
+
+
+            # P3用設定 ---------
+
             self.p3_flg = 2 # 0:P2, 1:line_setのみP3, 2:全部P3
+
+            #     PICアクセス
             self.__spi_init_write_buf = [0] * 0x29 # アドレス0x01～0x28使用
             self.__spi_write_buf = [[0] * 0x2E] * 2 # アドレス0x29～0x2D 2面使用
             self.__spi_write_buf_side = 0 # 0 or 1,  アクセス中なら、この値の逆サイド利用
             self.__spi_write_buf_flg = [0] * 0x2E # アドレス0x29～0x2D 使用, 1でwriteあり
+            self.__spi_write_buf_flg_lock = thread.allocate_lock()
             self.__spi_write_start_addr = 0x29 
             self.__spi_write_end_addr = 0x2D 
             self.__spi_write_buf_lock = thread.allocate_lock()
@@ -94,6 +93,19 @@ class TpP3Interface():
             self.__spi_read_start_addr = 0x29 
             self.__spi_read_end_addr = 0x64 # slot数で処理時間がかわるのを防ぐため、毎回最大スロットを読み込む
             self.__spi_read_buf_lock = thread.allocate_lock()
+
+            #     I2Cアクセス
+            self.__i2c_buf = ctypes.create_string_buffer(b'\000' * 1024 * 16)
+            self.__i2c_write_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libi2c_write.so')
+            self.__i2c_read_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libi2c_read.so')
+            self.__tp22_temp_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libtp22_temp.so')
+            self.__i2c_read_tp22_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libi2c_read_tp22.so')
+            self.__i2c_write_tp22_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libi2c_write_tp22.so')
+            #     SPIアクセス
+            self.__spi_buf = ctypes.create_string_buffer(b'\000' * 1024 * 64)
+            self.__spi_access_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libspi_access.so')
+            self.__fpga_lattice_lib = ctypes.cdll.LoadLibrary(self.__path + '/c/libfpga_lattice.so')
+
         else: # 非Tibbo-Pi環境（以下全メソッドで同様, dummy値を返すこともあり）
             pass
 
@@ -160,7 +172,10 @@ class TpP3Interface():
             addr = (slot - 1) + 0x01 
             data = self.__serial_data(baud, flow, parity)
             if self.p3_flg > 0:
-                self.__slot_set_p3(slot, SLOT_SETTING_SERI)
+                if flow == 0:
+                    self.__slot_set_p3(slot, SLOT_SETTING_SERI)
+                else:
+                    self.__slot_set_p3(slot, SLOT_SETTING_SERI_FLOW)
                 self.__spi_init_write_buf[addr] = data
             else:
                 self.__slot_set(slot, SLOT_SETTING_SERI)
@@ -219,37 +234,21 @@ class TpP3Interface():
                     return self.__spi_write_buf_write(address - PIC_WRITE_ADDR, vals)
 
             #print('spi_access', slot, mode, speed, endian, wait_ms, hex(address), list(map(hex, vals)), no_use_buf_flg)
-            c_cmd = self.__path +\
-                '/c/spi_access ' +\
-                str(mode) + ' ' +\
-                str(speed) + ' ' +\
-                str(endian) + ' ' +\
-                '0x' + format(int(address), '02x') + ' ' +\
-                str(wait_ms) + ' ' +\
-                str(slot) + ' ' +\
-                str(len(data))
-            for elem in data: c_cmd += ' 0x' + format(elem, '02x')
-            #print(c_cmd)
-            self.__spi_lock.acquire(1)
+
+            dat_str = ''
+            for elem in data: dat_str += 'x' + format(int(elem), '02x')
+            #print(dat_str)
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__spi_access_lib.spi_access(mode, speed, endian, address, wait_ms, slot, len(data), dat_str.encode('utf-8'), self.__spi_buf)
+                ret_str = str(repr(self.__spi_buf.value))[2:-1]
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-                self.__spi_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            if c_return != 0:
-                raise ValueError('SPI access error! : c_return = ' + str(c_return))
-            ret_str = str(ret_bin[0])[2:-1]
+            #print(c_ret)
+            if c_ret != 0:
+                raise ValueError('SPI access error! : c_ret = ' + str(c_ret))
             ret_str_sep = ret_str.split(',')
             ret = []
             for elem in ret_str_sep:
@@ -389,80 +388,48 @@ class TpP3Interface():
         self.__line_set_p3(slot, 3, LINE_SETTING_D_OUT_OD)
         self.__line_set_p3(slot, 4, LINE_SETTING_D_IN)
 
-    def tp22_temp(self, slot):
+    def tp22_temp(self):
         """ Tibbit#22, RTD読み出し
-            slot    : 1 ~ 10
             戻り    : C戻り値、16bit (0x1234 など)
         """
         if gTpEnv:
-            c_cmd = self.__path +\
-                '/c/tp22_temp ' +\
-                str(slot) + ' ' +\
-                str(self.__tp22_kbaud) 
-            #print(c_cmd)
-
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__tp22_temp_lib.tp22_temp(self.__tp22_kbaud, self.__i2c_buf)
+                ret_str = str(repr(self.__i2c_buf.value))[2:-1]
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            self.__i2c_end_tp22()
-            if c_return != 0:
-                #raise ValueError('tp22_temp error! : c_return = ' + str(c_return))
-                return c_return, -999999
-            ret_str = str(ret_bin[0])[2:-1]
+            #print(c_ret)
+            #self.__i2c_end_tp22()
+            if c_ret != 0:
+                #raise ValueError('tp22_temp error! : c_ret = ' + str(c_ret))
+                return c_ret, -999999
             ret = int(ret_str[2:], 16)
             #print(ret)
-            return c_return, ret
+            return c_ret, ret
         else:
             pass
 
-    def i2c_read_tp22(self, slot, num):
+    def i2c_read_tp22(self, num):
         """ Tibbit#22, I2C読み出し
-            slot    : 1 ~ 10
             num     : 読み込みbyte数
         """
-        #print('i2c_read_tp22', slot, num)
         if gTpEnv:
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/i2c_read_tp22 ' +\
-                str(slot) + ' ' +\
-                str(self.__tp22_kbaud) + ' ' +\
-                self.__tp22_addr + ' ' +\
-                str(num)
-            #print(c_cmd)
-
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__i2c_read_tp22_lib.i2c_read_tp22(self.__tp22_kbaud, self.__tp22_addr, num, self.__i2c_buf)
+                ret_str = str(repr(self.__i2c_buf.value))[2:-1]
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            self.__i2c_end_tp22()
-            if c_return != 0:
-                raise ValueError('i2c_read_tp22 error! : c_return = ' + str(c_return))
-            ret_str = str(ret_bin[0])[2:-1]
+            #print(c_ret)
+            #self.__i2c_end_tp22()
+            if c_ret != 0:
+                raise ValueError('i2c_read_tp22 error! : c_ret = ' + str(c_ret))
+            #ret_str = str(ret_bin[0])[2:-1]
             ret_str_sep = ret_str.split(',')
             ret = []
             for elem in ret_str_sep:
@@ -472,43 +439,24 @@ class TpP3Interface():
         else:
             pass
 
-    def i2c_write_tp22(self, slot, data, addr = 0):
+    def i2c_write_tp22(self, data, addr = 0):
         """ Tibbit#22, I2C書き込み
-            slot    : 1 ~ 10
             data    : 1byteのみ、書き込みデータ
             addr    : 指定されていたらSPIアドレス、0x80以上のはず
             戻り : なし
         """
-        #print('i2c_write_tp22', slot, data, addr)
         if gTpEnv:
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/i2c_write_tp22 ' +\
-                str(slot) + ' ' +\
-                str(self.__tp22_kbaud) + ' ' +\
-                self.__tp22_addr + ' ' +\
-                '0x' + format(int(data), '02x') 
-            if addr != 0: c_cmd += ' 0x' + format(int(addr), '02x')
-            #print(c_cmd)
-
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__i2c_write_tp22_lib.i2c_write_tp22(self.__tp22_kbaud, self.__tp22_addr, data, addr)
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            self.__i2c_end_tp22()
-            if c_return != 0:
-                raise ValueError('i2c_write_tp22 error! : c_return = ' + str(c_return))
+            #print(c_ret)
+            #self.__i2c_end_tp22()
+            if c_ret != 0:
+                raise ValueError('i2c_write_tp22 error! : c_ret = ' + str(c_ret))
         else:
             pass
         return
@@ -532,13 +480,7 @@ class TpP3Interface():
             self.gpio_write(slot, 1, 1)
 
             # FPGA書き込み
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/fpga_lattice ' +\
-                str(slot) + ' ' +\
-                '0 ' +\
-                file_path
-            #print(c_cmd)
-            c_return = self.__fpga_lattice_call(c_cmd)
+            c_return = self.__fpga_lattice_call(slot, 0, file_path)
             if c_return != 0:
                 raise ValueError('tpFPGA_write error! : c_return = ' + str(c_return))
         else:
@@ -550,12 +492,7 @@ class TpP3Interface():
         """
         #print('tp26_start_record', slot)
         if gTpEnv:
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/fpga_lattice ' +\
-                str(slot) + ' ' +\
-                '1 '
-            #print(c_cmd)
-            c_return = self.__fpga_lattice_call(c_cmd)
+            c_return = self.__fpga_lattice_call(slot, 1, '')
             if c_return != 0:
                 raise ValueError('tp26_start_record error! : c_return = ' + str(c_return))
         else:
@@ -569,12 +506,7 @@ class TpP3Interface():
         """
         #print('tp26_get_record', slot)
         if gTpEnv:
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/fpga_lattice ' +\
-                str(slot) + ' ' +\
-                '2 '
-            #print(c_cmd)
-            c_return = self.__fpga_lattice_call(c_cmd)
+            c_return = self.__fpga_lattice_call(slot, 2, '')
             if c_return != 0:
                 raise ValueError('tp26_get_record error! : c_return = ' + str(c_return))
             # 記録結果読み込み
@@ -595,12 +527,7 @@ class TpP3Interface():
             with open('/dev/shm/tp26_play.bin', 'wb') as f:
                 f.write(vals)
 
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/fpga_lattice ' +\
-                str(slot) + ' ' +\
-                '3 /dev/shm/tp26_play.bin'
-            #print(c_cmd)
-            c_return = self.__fpga_lattice_call(c_cmd)
+            c_return = self.__fpga_lattice_call(slot, 3, '/dev/shm/tp26_play.bin')
             if c_return != 0:
                 raise ValueError('tp26_put_play error! : c_return = ' + str(c_return))
         else:
@@ -612,12 +539,7 @@ class TpP3Interface():
         """
         #print('tp26_start_play', slot)
         if gTpEnv:
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/fpga_lattice ' +\
-                str(slot) + ' ' +\
-                '4 '
-            #print(c_cmd)
-            c_return = self.__fpga_lattice_call(c_cmd)
+            c_return = self.__fpga_lattice_call(slot, 4, '')
             if c_return != 0:
                 raise ValueError('tp26_start_play error! : c_return = ' + str(c_return))
         else:
@@ -631,41 +553,21 @@ class TpP3Interface():
             戻り    : i2cデータ
         """
         if gTpEnv:
-            #start = time.time()
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/i2c_read ' +\
-                str(self.__i2c_kbaud) +\
-                ' 0x' + format(int(address), '02x') +\
-                ' ' + str(num)
-            if cmd >= 0:
-                c_cmd += ' 0x' + format(int(cmd), '02x') 
-            #print(c_cmd)
-
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__i2c_read_lib.i2c_read(self.__i2c_kbaud, address, num, cmd, self.__i2c_buf)
+                ret_str = str(repr(self.__i2c_buf.value))[2:-1]
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            if c_return != 0:
-                raise ValueError('i2c_read error! : c_return = ' + str(c_return))
-            ret_str = str(ret_bin[0])[2:-1]
+            #print(c_ret, self.__i2c_buf)
+            if c_ret != 0:
+                raise ValueError('i2c_read error! : c_ret = ' + str(c_ret))
             ret_str_sep = ret_str.split(',')
             ret = []
             for elem in ret_str_sep:
                 ret.append(int(elem[2:], 16)) 
-            #dt = time.time() - start
-            #print('i2c_read:', dt * 1000, 'ms')
             #print(ret)
             return ret
         else:
@@ -698,36 +600,19 @@ class TpP3Interface():
             戻り : なし
         """
         if gTpEnv:
-            #start = time.time()
-            c_cmd = os.path.dirname(os.path.abspath(__file__)) +\
-                '/c/i2c_write ' +\
-                str(self.__i2c_kbaud) +\
-                ' 0x' + format(int(address), '02x') +\
-                ' ' + str(1 + len(vals)) +\
-                ' 0x' + format(int(cmd), '02x') 
-            for elem in vals: c_cmd += ' 0x' + format(int(elem), '02x')
-            #print(c_cmd)
-
+            dat_str = 'x' + format(int(cmd), '02x')
+            for elem in vals: dat_str += 'x' + format(int(elem), '02x')
+            #print(dat_str)
             self.__subp_lock.acquire(1)
             try:
-                c_ret = subprocess.Popen(c_cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        shell=True)
-
-                c_return = c_ret.wait()
-                ret_bin = c_ret.stdout.readlines()
+                c_ret = self.__i2c_write_lib.i2c_write(self.__i2c_kbaud, address, len(vals) + 1, dat_str.encode('utf-8'))
             except:
                 raise
             finally:
                 self.__subp_lock.release()
-            #print(c_return, ret_bin)
-            c_return -= 256 if c_return > 127 else c_return
-            if c_return != 0:
-                raise ValueError('i2c_write error! : c_return = ' + str(c_return))
-            #dt = time.time() - start
-            #print('i2c_write:', dt * 1000, 'ms')
+            #print(c_ret)
+            if c_ret != 0:
+                raise ValueError('i2c_write error! : c_ret = ' + str(c_ret))
         else:
             pass
         return
@@ -758,21 +643,6 @@ class TpP3Interface():
         for i, v in enumerate(ret): print(hex(i + addr), hex(v))
 
     # 内部メソッド ---
-
-    def __i2c_end_tp22(self):
-        while True:
-            try:
-                self.i2c_select(0)
-                break
-            except:
-                #print('__i2c_end_tp22 except!')
-                self.__subp_lock.acquire(1)
-                try:
-                    subprocess.call(self.__path + '/c/end_tp22.sh', shell=True)
-                except:
-                    raise
-                finally:
-                    self.__subp_lock.release()
 
     #def serial_event_callback_test(self, pin):
     #    self.__serial_event_callback(pin)
@@ -815,7 +685,7 @@ class TpP3Interface():
         ret <<= 4
 
         # フロー制御
-        ret += flow << 2
+        #ret += flow << 2
 
         # パリティ
         ret += parity        
@@ -1050,6 +920,7 @@ class TpP3Interface():
 
             # 読み込み
             #print(self.__spi_write_buf_flg[0x29:0x2E])
+            self.__spi_write_buf_flg_lock.acquire(1)
             if any(self.__spi_write_buf_flg[0x29:0x2E]): 
                 self.__spi_write_buf_put()
                 self.__spi_read_buf_get()
@@ -1057,6 +928,7 @@ class TpP3Interface():
                 self.__spi_write_buf_flg[self.__spi_write_start_addr:self.__spi_write_end_addr + 1] = [0] * (self.__spi_write_end_addr - self.__spi_write_start_addr + 1)
             else:
                 self.__spi_read_buf_get()
+            self.__spi_write_buf_flg_lock.release()
 
             # GPIO Inチェック
             if self.gpio_event_callback is not None:
@@ -1102,6 +974,7 @@ class TpP3Interface():
             戻り : なし
         """
         #print('__spi_write_buf_put', self.__spi_write_buf_side)
+        #print('__spi_write_buf_put', self.__spi_write_buf_side, list(map(hex, self.__spi_write_buf[self.__spi_write_buf_side][0x29:0x2E])))
         self.__spi_write_buf_lock.acquire(1)
         self.__pic_spi_access(self.__spi_write_start_addr + PIC_WRITE_ADDR, self.__spi_write_buf[self.__spi_write_buf_side][self.__spi_write_start_addr:self.__spi_write_end_addr + 1], True)
         self.__spi_write_buf_side = 0 if self.__spi_write_buf_side == 1 else 1
@@ -1128,18 +1001,23 @@ class TpP3Interface():
             vals : 書き込みデータ（リスト）
             戻り : valsそのまま
         """
+        self.__spi_write_buf_flg_lock.acquire(1)
         self.__spi_write_buf_flg[addr] = 1 # 書き込みフラグ
         lock_check = self.__spi_write_buf_lock.locked()
         if lock_check == True:
             # lock中なら、反対側のbufferを利用する。waitが入るので、すぐにbufferは書き換わらない
             side = 0 if self.__spi_write_buf_side == 1 else 1
             self.__spi_write_buf[side][addr:addr+len(vals)] = vals[0:len(vals)]
+            #print('__spi_write_buf_write', hex(addr), vals, lock_check, self.__spi_write_buf_side)
         else:
             # lockしていないなら、bufferアクセス中にputされないようにlockする
             self.__spi_write_buf_lock.acquire(1)
             side = 0 if self.__spi_write_buf_side == 1 else 1
             self.__spi_write_buf[side][addr:addr+len(vals)] = vals[0:len(vals)]
             self.__spi_write_buf_lock.release()
+            #print('__spi_write_buf_write', hex(addr), vals, lock_check, self.__spi_write_buf_side)
+            #print('__spi_write_buf_write', self.__spi_write_buf_flg[0x29:0x2E])
+        self.__spi_write_buf_flg_lock.release()
         return vals
 
     def __spi_read_buf_read(self, addr, vals):
@@ -1167,1117 +1045,16 @@ class TpP3Interface():
             #print('not locked', side, hex(addr), ret)
         return ret
 
-    def __fpga_lattice_call(self, c_cmd):
+    def __fpga_lattice_call(self, slot, mode, file_path):
         """ c/fpga_lattice 呼び出し
         """
         self.__subp_lock.acquire(1)
         try:
-            c_ret = subprocess.Popen(c_cmd,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=True)
-            c_return = c_ret.wait()
+            c_ret = self.__fpga_lattice_lib.fpga_lattice(slot, mode, file_path.encode('utf-8'))
         except:
             raise
         finally:
             self.__subp_lock.release()
-        #print(c_return)
-        c_return -= 256 if c_return > 127 else c_return
-        return c_return 
+        #print(c_ret)
+        return c_ret
 
-# main部 -----------------------------------------------------------------
-
-def pic_reg_read(inter, slot, address, num):
-    addr1 = address >> 8
-    addr2 = address & 0x00FF
-    #print(slot, num, address, addr1, addr2)
-    inter.i2c_select(slot)
-    inter.i2c_write_block_data(0x03, 0xFE, [addr1, addr2])
-    inter.i2c_select(0)
-    time.sleep(0.01)
-    inter.i2c_select(slot)
-    ret = inter.i2c_read(0x03, 0, num)
-    return ret
-
-def pic_reg_write(inter, slot, address, vals):
-    addr1 = address >> 8
-    addr2 = address & 0x00FF
-    dat = [addr1, addr2]
-    dat.extend(vals)
-    #print(slot, vals, address, addr1, addr2, dat)
-    inter.i2c_select(slot)
-    inter.i2c_write_block_data(0x03, 0xFE, dat)
-    inter.i2c_select(0)
-
-def tbt52_error_compensation(v0, v1, v2, v3):
-    r = v1 * 0x10000 + v2 * 0x100 + v3
-    ret = r / 1000000
-    ret += v0 * 0x1000000
-    if v0 & 0x80: ret = -ret
-    return ret   
-
-def tbt52_int_wait(slot):
-    while True:
-        v = inter.gpio_read(slot, 4)
-        if v == 1: break
-
-if __name__ == '__main__':
-    argv = sys.argv
-    inter = TpP3Interface()
-    lock = thread.allocate_lock()
-    inter.spi_lock_init(lock)
-    inter.board_init()
-
-    #inter.i2c_select(0)
-    #sys.exit();
-
-    while False:
-        #inter.dbg_pic_reg_print(0x00, 0x3D)
-        inter.dbg_pic_reg_print(0x00, 2)
-        print('')
-        time.sleep(1.0)
-
-    # ---
-
-    # #13(ADC with #12)  
-    if False:
-        slot = 8
-
-        inter.i2c_select(8)
-        while True:
-            for i in range(4):
-                ch = 0x88 + 0x10 * i
-                # ch set
-                inter.i2c_write_1byte(0x08, ch)
-                time.sleep(0.1)
-                # pre load
-                inter.i2c_read(0x08, ch, 2)
-                time.sleep(0.1)
-                # load
-                """
-                vh = inter.i2c_read(0x08, ch, 1)
-                vl = inter.i2c_read(0x08, ch, 1)
-                dw = vh[0] * 16 + vl[0] / 16
-                mv = (dw*488281-1000000000)/100000
-                print(slot, i + 1, vh, vl, mv/1000)
-                """
-                val = inter.i2c_read(0x08, ch, 2)
-                dw = val[0] * 16 + val[1] / 16
-                mv = (dw*488281-1000000000)/100000
-                print(slot, i + 1, hex(ch), val, mv/1000)
-                time.sleep(0.1)
-            print('')
-            time.sleep(0.5)
-
-
-    # #26 Reset & Write
-    if False:
-        inter.tpFPGA_write(4, './IR_Remote_bitmap.bin');
-
-    # #26 start record etc...
-    if False:
-    #if True:
-        #inter.tp26_start_record(4);
-        #inter.tp26_get_record(4);
-        inter.tp26_start_play(4);
-    # #26 put play
-    #if True:
-    if False:
-        with open('tp26_record.bin', 'rb') as f:
-            vals = f.read()
-        inter.tp26_put_play(4, vals);
-
-        #inter.tp26_start_record(4);
-
-    # #26 Reset
-    if False:
-        slot = 4
-        inter.gpio_write(slot, 1, 1)
-        inter.gpio_write(slot, 2, 0)
-        inter.gpio_write(slot, 2, 1)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 1, 0)
-        inter.gpio_write(slot, 2, 0)
-        inter.gpio_write(slot, 2, 1)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 1, 1)
-
-    # #52 Init & Read
-    if False:
-        slot = 3
-        line = 3
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.5)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.5)
-
-        inter.i2c_select(slot)
-
-        # 初期化
-        inter.i2c_write_1byte(0x10, 0x03)
-        #v = inter.i2c_read(0x10, 0, 15)
-        #print(v, ' '.join(list(map(chr, v))))
-        for i in range(4):
-            #print('ch', i + 1, 'setting')
-            inter.i2c_write_block_data(0x10, 0x02, [i, 0x1C])
-            tbt52_int_wait(slot)
-        #   param read(補正係数)
-        inter.i2c_write_1byte(0x10, 0x06)
-        tbt52_int_wait(slot)
-        time.sleep(0.1) # 150Kbpsにしてさらにwait必要
-        v = inter.i2c_read(0x10, 0, 16)
-        print(list(map(hex, v)))
-        err_comp = [0] * 4
-        err_comp[0] = tbt52_error_compensation(v[0],  v[1],  v[2],  v[3])
-        err_comp[1] = tbt52_error_compensation(v[4],  v[5],  v[6],  v[7])
-        err_comp[2] = tbt52_error_compensation(v[8],  v[9],  v[10], v[11])
-        err_comp[3] = tbt52_error_compensation(v[12], v[13], v[14], v[15])
-        print(err_comp)
-        tbt52_int_wait(slot)
-
-        inter.i2c_select(0)
-        
-        # 電圧取得 
-        while True:
-            time.sleep(0.5) 
-            inter.i2c_select(slot)
-            flg = 0
-            while True:
-                while True:
-                    time.sleep(0.1) 
-                    inter.i2c_write_block_data(0x10, 0x01, [line])
-                    tbt52_int_wait(slot)
-                    v = inter.i2c_read(0x10, 0, 3)
-                    print(list(map(hex, v)))
-                    if v[2] & 0x80 == 0: break
-                if flg == 0:
-                    inter.i2c_write_block_data(0x10, 0x02, [line, 0x9C])
-                    tbt52_int_wait(slot)
-                    flg = 1
-                else:
-                    tmp = v[0] * 256 + v[1]
-                    break
-
-            if tmp <= 0x7FFF:
-                sign = 1
-            else:
-                sign = -1
-                tmp =  0xFFFF - tmp + 1
-
-            volt = err_comp[line] * tmp / 1000000 + tmp * 0.00030517578125
-            if sign < 0: volt = -volt
-
-            print(volt, '[V]')
-            inter.i2c_select(0)
-
-
-    # #52 Ver Read
-    if False:
-        slot = 3
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.5)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.5)
-
-        inter.i2c_select(slot)
-        inter.i2c_write_1byte(0x10, 0x03)
-        v = inter.i2c_read(0x10, 0, 15)
-        print(v, ' '.join(list(map(chr, v))))
-
-    # #26(FPGA IR) Reset 
-    if False:
-        slot = 4
-        # S04設定
-        inter.spi_access(0, 3, 250, 1, 0, 0x94, [0x03, 0x00, 0x00]) # SPI設定
-        """
-        out = [0] * 1024
-        inter.spi_access(4, 2, 500, 1, 0, 0x00, out)
-        sys.exit();
-        time.sleep(0.1)
-
-        c_cmd = './c/spi4lattice 2 250 1 0x00 0 4 ./IR_Remote_bitmap.bin'
-        c_ret = subprocess.Popen(c_cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True)
-        c_return = c_ret.wait()
-        c_return -= 256 if c_return > 127 else c_return
-        ret_bin = c_ret.stdout.readlines()
-        print(c_return, ret_bin)
-        """
-
-
-    # #26(FPGA IR) Reset & SPI , 遅過ぎてボツ
-    if False:
-        slot = 4
-        # S04設定
-        inter.spi_access(0, 3, 250, 1, 0, 0x94, [0x00, 0x44, 0x42]) # GPIO設定 LineA,B,C = Out, D = In
-        ret = inter.spi_access(0, 3, 250, 1, 0, 0x2A, [0])
-        ret[0] &= 0xF0
-        ret[0] |= 0x0F
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret) # All High
-        time.sleep(0.01)
-        # CS = High の状態で、Clk = Low, High = FPGA Reset Assert
-        ret[0] &= 0xFB # S4/LineB(SCLK) = Low
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-        ret[0] |= 0x04 # S4/LineB(SCLK) = High
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-
-        time.sleep(0.001) # 200nsのかわり
-        
-        # CS = Low の状態で、Clk = Low, High = FPGA Reset Deassert
-        ret[0] &= 0xF7 # S4/LineA(CS) = Low
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-        ret[0] &= 0xFB # S4/LineB(SCLK) = Low
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-        ret[0] |= 0x04 # S4/LineB(SCLK) = High
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-
-        # CS = Lowの状態でClk = Low
-        ret[0] &= 0xFB # S4/LineB(SCLK) = Low
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-
-        # S04設定
-        #inter.spi_access(0, 3, 250, 1, 0, 0x94, [0x03, 0x00, 0x00]) # SPI設定
-        """
-        # CS = High
-        ret[0] |= 0x08 # S4/LineA(CS) = High
-        inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-        """
-        while True:
-            ret[0] &= 0xFB # S4/LineB(SCLK) = Low
-            inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-            ret[0] |= 0x04 # S4/LineB(SCLK) = High
-            inter.spi_access(0, 3, 250, 1, 0, 0xAA, ret)
-
-
-    # #26(FPGA IR)
-    if False:
-        slot = 4
-        # S04設定
-        inter.spi_access(0, 3, 250, 1, 0, 0x94, [0x03, 0x00, 0x00]) # SPI設定
-        time.sleep(0.5)
-
-        ret = inter.spi_access(slot, 2, 100, 1, 0, 0x02, [8])
-        print(ret)
-        ret = inter.spi_access(slot, 2, 100, 1, 0, 0x00, [8])
-        print(ret)
-        ret = inter.spi_access(slot, 2, 100, 1, 0, 0x00, [8])
-        print(ret)
-        ret = inter.spi_access(slot, 2, 100, 1, 0, 0x00, [8])
-        print(ret)
-
-    # I2C Test
-    # #16,17 Block Read
-    if False:
-        slot = 7
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.5)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.5)
-
-        while True:
-            inter.i2c_select(slot)
-            inter.i2c_write_block_data(0x03, 0xFE, [0, 0x99])
-            inter.i2c_select(0)
-            inter.i2c_select(slot)
-            v = inter.i2c_read(0x03, 0, 1)
-            print(hex(v[0]))
-            inter.i2c_select(0)
-            time.sleep(1)
-
-    # #16,17 Block Write/Read
-    if False:
-        slot = 7
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.5)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.5)
-
-        inter.i2c_select(slot)
-        inter.i2c_write_block_data(0x03, 0xFE, [0, 0x20])
-        #inter.i2c_write_block_data(0x03, 0xFE, [0, 0x20, 1,2,3,4])
-        inter.i2c_select(0)
-
-        while True:
-            inter.i2c_select(slot)
-            inter.i2c_write_block_data(0x03, 0xFE, [0, 0x20])
-            inter.i2c_select(0)
-            inter.i2c_select(slot)
-            print(inter.i2c_read(0x03, 0, 4))
-
-    # #16,17,31 PWM-LineA
-    if False: #mkxxx20180824
-        slot = 2
-        inter.board_init()
-        # line設定
-        inter.i2c_init(slot, 100)
-        inter.gpio_init(slot, 3, LINE_SETTING_D_OUT_OD)
-        inter.gpio_init(slot, 4, LINE_SETTING_D_IN)
-        inter.pic_slot_init()
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        tris[0] |= 0x10 # RA4 入力へ
-        tris[2] &= 0xDF # RC5 出力へ
-        ansel[0] &= 0xEF # RA4 デジタル
-        ansel[2] &= 0xDF # RC5 デジタル
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        # PWM設定
-        pic_reg_write(inter, slot, 0x001B, [255]) # PR2
-        pic_reg_write(inter, slot, 0x001C, [0x04]) # T2CON
-        pic_reg_write(inter, slot, 0x0291, [0x40]) # CCPR1L
-        pic_reg_write(inter, slot, 0x0293, [0x0C]) # CCP1CON
-
-    # #16,17,31 PWM-LineB
-    if False: #mkxxx20180824
-        slot = 4
-        inter.board_init()
-        # line設定
-        inter.i2c_init(slot, 150)
-        inter.gpio_init(slot, 3, LINE_SETTING_D_OUT_OD)
-        inter.gpio_init(slot, 4, LINE_SETTING_D_IN)
-        inter.pic_slot_init()
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        tris[2] |= 0x10 # RC4入力へ
-        tris[2] &= 0xF7 # RC3 出力へ
-        ansel[2] &= 0xE7 # RC3,4 デジタル
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        # PWM設定
-        pic_reg_write(inter, slot, 0x0416, [255]) # PR4
-        pic_reg_write(inter, slot, 0x0417, [0x04]) # T4CON
-        pic_reg_write(inter, slot, 0x0298, [0x40]) # CCPR2L
-        pic_reg_write(inter, slot, 0x029A, [0x0C]) # CCP2CON
-
-    # #16,17,31 PWM-LineC
-    if False: #mkxxx20180824
-        slot = 4
-        inter.board_init()
-        # line設定
-        inter.i2c_init(slot, 100)
-        inter.gpio_init(slot, 3, LINE_SETTING_D_OUT_OD)
-        inter.gpio_init(slot, 4, LINE_SETTING_D_IN)
-        inter.pic_slot_init()
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        tris[0] &= 0xFB # RA2 出力へ
-        ansel[0] &= 0xFB # RA2 デジタル
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        # PWM設定
-        #pic_reg_write(inter, slot, 0x041D, [255]) # PR6
-        #pic_reg_write(inter, slot, 0x041E, [0x04]) # T6CON
-        #pic_reg_write(inter, slot, 0x0311, [0x40]) # CCPR3L
-        #pic_reg_write(inter, slot, 0x0313, [0x0C]) # CCP3CON
-
-        # PWM計算                
-        #period = 0.125 # [us] 0.1(0.125)～2048
-        period = 10 # [us] 0.1(0.125)～2048
-        if period < 32.0:
-            txcon = 0
-            txcon_val = 1
-            prx = round(period / 0.125)
-        elif period < 128.0:
-            txcon = 1
-            txcon_val = 4
-            prx = round(period / 0.5)
-        elif period < 512.0:
-            txcon = 2
-            txcon_val = 16
-            prx = round(period / 2.0)
-        elif period <= 2048.0:
-            txcon = 3
-            txcon_val = 64
-            prx = round(period / 8.0)
-        else:
-            print('period err', period)
-        prx = prx - 1 if prx != 0 else 0 
-        print('period =', period, txcon, txcon_val, prx)
-
-        #pulse_width = 0.03125 # [us] 0～0.3125～period
-        pulse_width = 5 # [us] 0～0.3125～period
-        ccp10bit = round(pulse_width * 32 / txcon_val)
-        ccpcon54 = (ccp10bit & 0x0003) << 4
-        ccprxl = ccp10bit >> 2
-        print('pulse_width =', pulse_width, txcon_val, ccp10bit, ccpcon54, ccprxl)
-
-        # パラメータ表示
-        print('1周期長さ=', period, '[us]')
-        print('周波数=', 1./ period * 1000000, '[Hz]')
-
-        print('パルス幅 =', pulse_width, '[us]')
-        print('duty比 =', pulse_width / period * 100, '[%]')
-
-        # PWM設定
-        pic_reg_write(inter, slot, 0x041D, [prx]) # PR6
-        pic_reg_write(inter, slot, 0x041E, [0x04 | txcon]) # T6CON
-        pic_reg_write(inter, slot, 0x0311, [ccprxl]) # CCPR3L
-        pic_reg_write(inter, slot, 0x0313, [0x0C | ccpcon54]) # CCP3CON
-
-    # #31 GPIO-Out
-    if False: 
-        slot = 4
-        line = 1
-        inter.board_init()
-        # line設定
-        inter.i2c_init(slot, 100)
-        inter.gpio_init(slot, 3, LINE_SETTING_D_OUT_OD)
-        inter.gpio_init(slot, 4, LINE_SETTING_D_IN)
-        inter.pic_slot_init()
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        if line == 1: # IO1
-            lat[0] |= 0x10 # RA4
-            lat[2] |= 0x20 # RC5
-            tris[0] |= 0x10 # RA4 入力へ
-            tris[2] &= 0xDF # RC5 出力へ
-            ansel[0] |= 0x10 # RA4 アナログ
-            ansel[2] &= 0xDF # RC5 デジタル
-        elif line == 2: # IO2
-            lat[2] |= 0x18 # RC3,4 
-            tris[2] |= 0x10 # RC4入力へ
-            tris[2] &= 0xF7 # RC3 出力へ
-            ansel[2] |= 0x10 # RC4 アナログ
-            ansel[2] &= 0xF7 # RC3 デジタル
-        elif line == 3: # IO3
-            lat[0] |= 0x04 # RA2
-            tris[0] &= 0xFB # RA2 出力へ
-            ansel[0] &= 0xFB # RA2 デジタル
-        else: # IO4
-            lat[2] |= 0x04 # RC2
-            tris[2] &= 0xFB # RC2 出力へ
-            ansel[2] &= 0xFB # RC2 デジタル
-        pic_reg_write(inter, slot, 0x010C, lat)
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        flg = 1
-        while True:
-            flg = 0 if flg == 1 else 1
-            port = pic_reg_read(inter, slot, 0x000C, 3) # PORTA,B,C
-            if line == 1: # RC5
-                if flg == 1:
-                    port[2] |= 0x20
-                else:
-                    port[2] &= 0xDF
-            elif line == 2: # RC3
-                if flg == 1:
-                    port[2] |= 0x08
-                else:
-                    port[2] &= 0xF7
-            elif line == 3: # RA2
-                if flg == 1:
-                    port[0] |= 0x04
-                else:
-                    port[0] &= 0xFB
-            else: # RC2
-                if flg == 1:
-                    port[2] |= 0x04
-                else:
-                    port[2] &= 0xFB
-
-            time.sleep(0.01)
-            pic_reg_write(inter, slot, 0x000C, port)
-
-    # #31 GPIO-In
-    if False:
-        slot = 9
-        line = 3
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        if line == 1: # IO1
-            lat[0] |= 0x10 # RA4
-            lat[2] |= 0x20 # RC5
-            tris[0] |= 0x10 # RA4 入力へ
-            tris[2] |= 0x20 # RC5 入力へ
-            ansel[0] |= 0x10 # RA4 アナログ
-            ansel[2] &= 0xDF # RC5 デジタル
-        elif line == 2: # IO2
-            lat[2] |= 0x18 # RC3,4 
-            tris[2] |= 0x10 # RC4 入力へ
-            tris[2] |= 0x08 # RC3 入力へ
-            ansel[2] |= 0x10 # RC4 アナログ
-            ansel[2] &= 0xF7 # RC3 デジタル
-        elif line == 3: # IO3
-            lat[0] |= 0x04 # RA2
-            tris[0] |= 0x04 # RA2 入力へ
-            ansel[0] &= 0xFB # RA2 デジタル
-        else: # IO4
-            lat[2] |= 0x04 # RC2
-            tris[2] |= 0x04 # RC2 入力へ
-            ansel[2] &= 0xFB # RC2 デジタル
-        pic_reg_write(inter, slot, 0x010C, lat)
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        while True:
-            port = pic_reg_read(inter, slot, 0x000C, 3) # PORTA,B,C
-            if line == 1: # RC5
-                val = 1 if port[2] & 0x20 else 0
-            elif line == 2: # RC3
-                val = 1 if port[2] & 0x08 else 0
-            elif line == 3: # RA2
-                val = 1 if port[0] & 0x04 else 0
-            else: # RC2
-                val = 1 if port[2] & 0x04 else 0
-
-            print(val)
-            time.sleep(0.5)
-
-    # #31 ADC
-    if False:
-        slot = 9
-        line = 1
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-        if line == 1: # IO1
-            lat[0] |= 0x10 # RA4
-            lat[2] |= 0x20 # RC5
-            tris[0] |= 0x10 # RA4 入力へ
-            tris[2] |= 0x20 # RC5 入力へ
-            ansel[0] |= 0x10 # RA4 アナログ
-            ansel[2] &= 0xDF # RC5 デジタル
-        elif line == 2: # IO2
-            lat[2] |= 0x18 # RC3,4 
-            tris[2] |= 0x10 # RC4 入力へ
-            tris[2] |= 0x08 # RC3 入力へ
-            ansel[2] &= 0xEF # RC4 デジタル
-            ansel[2] |= 0x08 # RC3 アナログ
-        elif line == 3: # IO3
-            lat[0] |= 0x04 # RA2
-            tris[0] |= 0x04 # RA2 入力へ
-            ansel[0] |= 0x04 # RA2 アナログ
-        else: # IO4
-            lat[2] |= 0x04 # RC2
-            tris[2] |= 0x04 # RC2 入力へ
-            ansel[2] |= 0x04 # RC2 アナログ
-        pic_reg_write(inter, slot, 0x010C, lat)
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        # ADC config 
-        vref = 5 # 電圧設定
-        adcon = pic_reg_read(inter, slot, 0x009E, 1) # ADCON1
-        fvrcon = pic_reg_read(inter, slot, 0x0117, 1) # FVRCON
-        if vref == 5:
-            adcon[0] &= 0xFC # bit0,1 clear
-            fvrcon[0] &= 0xFC # bit0,1 clear
-        elif vref == 4.096:
-            adcon[0] |= 0x03 # bit0,1 set
-            fvrcon[0] |= 0x83 # bit0,1 = 11, bit7 set
-        elif vref == 2.048:
-            adcon[0] |= 0x03 # bit0,1 set
-            fvrcon[0] &= 0xFC # bit0,1 = clear
-            fvrcon[0] |= 0x82 # bit0,1 = 10, bit7 set
-        else: # 1.024V
-            adcon[0] |= 0x03 # bit0,1 set
-            fvrcon[0] &= 0xFC # bit0,1 = clear
-            fvrcon[0] |= 0x81 # bit0,1 = 01, bit7 set
-        adcon[0] |= 0x80 # 右詰め
-        adcon[0] |= 0x60 # Frc # サンプル時間設定 0x40:1us, 0x60:2us, 0x70:1-6us=Frc
-        pic_reg_write(inter, slot, 0x009E, adcon) # ADCON1
-        pic_reg_write(inter, slot, 0x0117, fvrcon) # FVRCON
-
-        while True:
-            if line == 1: # RA4=AN3
-                val = 0x0C | 0x03
-            elif line == 2: # RC3=AN7
-                val = 0x1C | 0x03
-            elif line == 3: # RA2=AN2
-                val = 0x08 | 0x03
-            else: # RC2=AN6
-                val = 0x18 | 0x03
-            pic_reg_write(inter, slot, 0x009D, [val]) # ADCON0, ADC開始
-            while True:
-                adc_chk = pic_reg_read(inter, slot, 0x009D, 1) # ADCON0
-                if adc_chk[0] & 0x02 == 0: break
-
-            adc_val = pic_reg_read(inter, slot, 0x009B, 2) # ADRESL/H
-            calc_val = (adc_val[1] * 256 + adc_val[0]) * vref / 1024
-
-            print(hex(adc_val[1]), hex(adc_val[0]), calc_val)
-            time.sleep(0.5)
-
-    # #31 UART
-    if False: 
-        slot = 9
-
-        # Reset
-        inter.gpio_write(slot, 3, 0)
-        time.sleep(0.01)
-        inter.gpio_write(slot, 3, 1)
-        time.sleep(0.01)
-
-        # init
-        pic_reg_write(inter, slot, 0x011D, [0x20, 0x00]) # APFCON0,1
-        pic_reg_write(inter, slot, 0x029E, [0x24]) # CCPTMRS0
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        lat[0] |= 0x03 # LATA
-        lat[2] |= 0x03 # LATC 
-        pic_reg_write(inter, slot, 0x010C, lat)
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        tris[0] |= 0x03 # TRISA
-        tris[2] |= 0x03 # TRISC
-        pic_reg_write(inter, slot, 0x008C, tris)
-
-        # config 
-        lat = pic_reg_read(inter, slot, 0x010C, 3) # LATA,B,C
-        tris = pic_reg_read(inter, slot, 0x008C, 3) # TRISA,B,C
-        ansel = pic_reg_read(inter, slot, 0x018C, 3) # ANSELA,B,C
-
-        lat[0] |= 0x10 # RA4
-        lat[2] |= 0x20 # RC5 = RX
-        tris[0] |= 0x10 # RA4 入力へ
-        tris[2] |= 0x20 # RC5 入力へ
-        ansel[0] &= 0xEF # RA4 デジタル
-        #ansel[2] &= 0xDF # RC5 デジタル
-        lat[2] |= 0x18 # RC3,4 
-        tris[2] &= 0xE7 # RC3,4 出力へ
-        ansel[2] &= 0xE7 # RC3,4 デジタル
-
-        pic_reg_write(inter, slot, 0x010C, lat)
-        pic_reg_write(inter, slot, 0x008C, tris)
-        pic_reg_write(inter, slot, 0x018C, ansel)
-
-        # UART config 
-        #   RX割り込みEnable
-        pie1 = pic_reg_read(inter, slot, 0x0091, 1) # PIE1
-        pie1[0] |= 0x20
-        pic_reg_write(inter, slot, 0x0091, pie1) 
-        #   事前設定
-        sta = pic_reg_read(inter, slot, 0x019D, 2) # RCSTA,TXSTA
-        sta[0] &= 0x7F # SPEN = 0
-        sta[1] &= 0xDF # SREN = 0
-        pic_reg_write(inter, slot, 0x019D, sta) 
-        uartflg = pic_reg_read(inter, slot, 0x007E, 1) # UARTFLAG(FW)
-        uartflg[0] &= 0xBF # bit6 = 0
-        uartflg[0] |= 0x80 # bit7 = 1
-        pic_reg_write(inter, slot, 0x007E, uartflg) 
-        #   baudrate設定
-        txsta = pic_reg_read(inter, slot, 0x019E, 1) # TXSTA
-        txsta[0] |= 0x04 # BRGH = 1
-        pic_reg_write(inter, slot, 0x019E, txsta) 
-        baudcon = pic_reg_read(inter, slot, 0x019F, 1) # BAUDCON
-        baudcon[0] |= 0x08 # BRG16 = 1
-        pic_reg_write(inter, slot, 0x019F, baudcon) 
-        baud = 9600 
-        if baud == 300:    
-            spbrg = 26666
-        elif baud == 600: 
-            spbrg = 13332
-        elif baud == 1200: 
-            spbrg = 6666
-        elif baud == 2400: 
-            spbrg = 3332 
-        elif baud == 4800: 
-            spbrg = 1666
-        elif baud == 9600: 
-            spbrg = 832
-        elif baud == 19200: 
-            spbrg = 416
-        elif baud == 38400: 
-            spbrg = 208 
-        elif baud == 57600: 
-            spbrg = 138
-        else: # 115.2k 
-            spbrg = 68
-        spbrgl = spbrg % 256
-        spbrgh = spbrg >> 8
-        pic_reg_write(inter, slot, 0x019B, [spbrgl, spbrgh]) # SPBRGL/H
-        #   parity設定
-        parity = 0 # 0:none, 1:odd, 2:even
-        sta = pic_reg_read(inter, slot, 0x019D, 2) # RCSTA,TXSTA
-        uartflg = pic_reg_read(inter, slot, 0x007E, 1) # UARTFLAG(FW)
-        if parity == 0:
-            sta[0] &= 0xBF # RX9 = 0
-            sta[1] &= 0xBF # TX9 = 0
-            uartflg[0] &= 0x8F # bit4-6 = 000
-        elif parity == 1: # odd
-            sta[0] |= 0x41 # RX9 = 1, RX9D = 1
-            sta[1] |= 0x41 # TX9 = 1, TX9D = 1
-            uartflg[0] &= 0x8F # bit6-4 = 000
-            uartflg[0] |= 0x50 # bit6-4 = 101
-        else: # even
-            sta[0] |= 0x40 # RX9 = 1
-            sta[1] |= 0x40 # TX9 = 1
-            sta[0] &= 0xFE # RX9D = 0
-            sta[1] &= 0xFE # TX9D = 0
-            uartflg[0] &= 0x8F # bit6-4 = 000
-            uartflg[0] |= 0x40 # bit6-4 = 100
-        pic_reg_write(inter, slot, 0x019D, sta) 
-        pic_reg_write(inter, slot, 0x007E, uartflg) 
-        #   受信開始設定
-        #   送信開始設定
-        sta = pic_reg_read(inter, slot, 0x019D, 2) # RCSTA,TXSTA
-        sta[0] |= 0x90 # SREN = 1, CREN = 1
-        sta[1] |= 0x20 # TXEN = 1
-        pic_reg_write(inter, slot, 0x019D, sta) 
-        #uartflg = pic_reg_read(inter, slot, 0x007E, 1) # UARTFLAG(FW)
-        #uartflg[0] |= 0x40 # bit6 = 1
-        #pic_reg_write(inter, slot, 0x007E, uartflg) 
-        #   割り込みpin設定
-        trisa = pic_reg_read(inter, slot, 0x008C, 1) # TRISA
-        trisa[0] &= 0xDF # RA5 出力へ
-        pic_reg_write(inter, slot, 0x008C, trisa)
-
-
-        while True:
-            # 送信
-            pic_reg_write(inter, slot, 0x0120, [0x30, 0x31, 0x32, 0x33]) # TX_BUFF(FW), '0123'
-            pic_reg_write(inter, slot, 0x0077, [4]) # TX_BYTE(FW), 
-            # 受信割り込み確認後受信
-            #   割り込み確認省略
-            while True: # 受信byte数2度読み
-                num1 = pic_reg_read(inter, slot, 0x0076, 1) # RX_BYTE(FW)
-                num2 = pic_reg_read(inter, slot, 0x0076, 1) # RX_BYTE(FW)
-                if num1[0] == num2[0]: break
-            if num1[0] > 0:
-                pic_reg_write(inter, slot, 0x0076, [0]) # RX_BYTE(FW), 
-                val = pic_reg_read(inter, slot, 0x00A0, num1[0]) # RX_BUFF(FW)
-                print(num1, val)
-
-            time.sleep(0.5)
-
-    # #29Block Test(Temp)
-    while False: 
-        begin_time = time.time()
-        inter.i2c_select(5)
-        ret = inter.i2c_read(0x18, 0x05, 2)
-        val = (ret[0] & 0x0F) * 16 + ret[1] / 16
-        print(ret, val)
-        inter.i2c_select()
-        end_time = time.time()
-        print('                   ', (end_time - begin_time)*1000, 'ms')
-        #time.sleep(0.1)
-
-    # #22Block Test(Temp)
-    while False: 
-        begin_time = time.time()
-        ret = inter.tp22_temp(2)
-        print(ret)
-        end_time = time.time()
-        print('                   ', (end_time - begin_time)*1000, 'ms')
-
-    # #22Block Test(Version)
-    if False: 
-        inter.i2c_write_tp22(6, 0x03)
-        ret = inter.i2c_read_tp22(6, 16)
-        print(ret)
-
-    # #22Block Test
-    if False:
-        #subprocess.call(['sudo', '/home/pi/P2/src/20180518b/py/c/a.out'])
-        while True:
-            inter.i2c_select(6)
-            inter.i2c_write_1byte(0x0D, 0x03)
-            ret = inter.i2c_read(0x0D, 0x80, 16)
-            ver = ''
-            for char in ret: 
-                ver += chr(char)
-            print(ret, ver)
-            #time.sleep(0.1)
-
-
-    # Block Line Test（LED点灯させる）
-    while False:
-        inter.dbg_pic_reg_print(0x00, 0x3D)
-        for slot in range(1, 11):
-            for line in range(1, 5):
-                inter.gpio_write(slot, line, 0)
-        for slot in range(1, 11):
-            for line in range(1, 5):
-                inter.gpio_write(slot, line, 1)
-
-    # Led Test
-    while False:
-        for led in range(1, 5):
-            inter.rp_led(led, 1)
-            time.sleep(0.5)
-            inter.rp_led(led, 0)
-    # Button & Buzzer Test
-    while False:
-        md = GPIO.input(24)
-        rst = GPIO.input(23)
-        print('MD =', md, 'RST =', rst)
-        if md == 0 or rst == 0:
-            inter.rp_buzzer(1)
-        else:
-            inter.rp_buzzer(0)
-        time.sleep(0.1)
-
-    # GPIO Out(Raw)
-    if False: 
-        inter.dbg_pic_reg_print(0x00, 0x3D)
-        # S06設定
-        ret = inter.spi_access(3, 500, 1, 0, 0x9A, [0x00, 0x40])
-        # S06出力
-        while True:
-            ret = inter.spi_access(3, 500, 1, 0, 0xAB, [0x00])
-            time.sleep(1)
-            ret = inter.spi_access(3, 500, 1, 0, 0xAB, [0x08])
-            time.sleep(1)
-
-    # GPIO IN Test
-    if True: #mkxxx20180827
-        inter.spi_init(1, 250)
-        start_slot = 1
-        end_slot = 10
-        inter.board_init()
-        # 全slot全line 設定
-        for i in range(start_slot, end_slot + 1): 
-            for j in range(1,5): 
-                inter.gpio_init(i, j, LINE_SETTING_D_IN)
-        inter.pic_slot_init()
-        inter.dbg_pic_reg_print(0x00, 0x29)
-       
-    # GPIO Out Test
-    if False: #mkxxx20180824
-        start_slot = 1
-        end_slot = 10
-        inter.board_init()
-        # 全slot全line 設定
-        for i in range(start_slot, end_slot + 1): 
-            for j in range(1,5): 
-                inter.gpio_init(i, j, LINE_SETTING_D_OUT_OD)
-        inter.pic_slot_init()
-        #inter.dbg_pic_reg_print(0x00, 0x29)
-       
-        time.sleep(1)
-        inter.gpio_write(4, 2, 0)
-        while True:
-            time.sleep(0.01)
-
-    # GPIO Out
-    if False: #mkxxx20180823
-        start_slot = 1
-        end_slot = 10
-        inter.board_init()
-        # 全slot全line 設定
-        for i in range(start_slot, end_slot + 1): 
-            for j in range(1,5): 
-                inter.gpio_init(i, j, LINE_SETTING_D_OUT_OD)
-        inter.pic_slot_init()
-        #inter.dbg_pic_reg_print(0x00, 0x29)
-        
-        while True:
-            for i in range(start_slot, end_slot + 1):
-                for j in range(1,5):
-                    inter.gpio_write(i, j, 1)
-                    time.sleep(0.01)
-            for i in range(start_slot, end_slot + 1):
-                for j in range(1,5):
-                    inter.gpio_write(i, j, 0)
-                    time.sleep(0.01)
-
-    # GPIO Out/In
-    if False:
-        flg = 0
-        for i in range(10):
-            inter.gpio_write(1, 1, 0)
-            time.sleep(0.1)
-        while True:
-            out_slot = 5
-            in_slot  = 4
-            for i in range(1,5):
-                inter.gpio_write(out_slot, i, flg)
-                v = inter.gpio_read(in_slot, i)
-                print(in_slot, i, v)
-                time.sleep(0.5)
-            print('')
-            flg = 0 if flg == 1 else 1
-
-    # Analog read
-    if False:
-        while True:
-            slot = 1
-            for i in range(1,5):
-                v = inter.analog_read(slot, i)
-                print(slot, i, v)
-                time.sleep(0.1)
-            time.sleep(0.5)
-            print('')
-
-    # SPI (slot 1～10)
-    while False:
-        slot = 7
-        ret = inter.spi_access(slot, 3, 500, 1, 1, 0x00, [0, 0, 0, 0, 0, 0])
-        print(ret)
-        time.sleep(0.5)
-
-    if False:
-        dat = [0] * 30
-        ret = inter.spi_access(3, 50, 1, 1, 0x8B, dat)
-        print(ret)
-
-    if False:
-        #inter.spi_select(0)
-        #ret = inter.spi_access(3, 50, 1, 1, 0xA6, [0, 0x22, 0x22])
-        #print(ret)
-        #inter.spi_select()
-        #time.sleep(0.01)
-
-        for addr in range(0x0B, 0x29, 3):
-            inter.spi_select(0)
-            ret = inter.spi_access(3, 50, 1, 1, addr, [0, 0, 0])
-            print(ret)
-            inter.spi_select()
-            time.sleep(0.01)
-
-    if False:
-        dat = [0] * 30
-        ret = inter.spi_access(3, 500, 1, 0, 0x0B, dat)
-        print(ret)
-
-    if False:
-        inter.gpio_event_init('', 1, 1)
-        inter.gpio_event_init('', 10, 4)
-        #inter.gpio_event_callback_test(13)
-
-    if False:
-        inter.serial_event_callback_test(20)
-
-    while False:
-        inter.rp_led(1, 1)
-        inter.rp_led(2, 0)
-        inter.rp_led(3, 1)
-        inter.rp_led(4, 0)
-        time.sleep(1)
-        inter.rp_led(1, 0)
-        inter.rp_led(2, 1)
-        inter.rp_led(3, 0)
-        inter.rp_led(4, 1)
-        time.sleep(1)

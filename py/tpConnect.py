@@ -15,7 +15,7 @@ class TpConnect:
     Tibbo-Pi制御.pyとの仲介を行います。
     """
 
-    def __init__(self, settings):
+    def __init__(self, settings, connect_flg):
         """
         コンストラクタ
         """
@@ -32,6 +32,9 @@ class TpConnect:
 
         # 排他ロック確認用
         self.__lockList = []
+
+        # 外部からの接続可否
+        self.connect_flg = connect_flg
 
     def start(self):
         """
@@ -73,8 +76,12 @@ class TpConnect:
             # 保持(ポートごと)
             self.tcp_server_list[setting['port']] = tcp_srv
 
-            # 受信待ち(bindのhostは指定しない)
-            tcp_srv.recv('', setting['port'])
+            # 受信待ち
+            bind_host = 'localhost'
+            if self.connect_flg:
+                # 外部も許可
+                bind_host = ''
+            tcp_srv.recv(bind_host, setting['port'])
 
         except Exception as e:
             # 失敗
@@ -93,8 +100,12 @@ class TpConnect:
             # 保持(ポートごと)
             self.tcp_server_list[setting['portEvent']] = tcp_srv
 
-            # 待機(bindのhostは指定しない)
-            tcp_srv.recv('', setting['portEvent'])
+            # 待機
+            bind_host = 'localhost'
+            if self.connect_flg:
+                # 外部も許可
+                bind_host = ''
+            tcp_srv.recv(bind_host, setting['portEvent'])
 
         except Exception as e:
             # 失敗
@@ -184,8 +195,12 @@ if __name__ == '__main__':
     if (len(argvs) > 1):
         setting_file = argvs[1]
 
+    connect_flg = False
+    if (len(argvs) > 2 and argvs[2] == 'true'):
+        connect_flg = argvs[2]
+
     # インスタンス生成
-    tp_connect = TpConnect(setting_file)
+    tp_connect = TpConnect(setting_file, connect_flg)
 
     # サーバ起動
     tp_connect.start()

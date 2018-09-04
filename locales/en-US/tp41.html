@@ -15,28 +15,28 @@
                 <li>
                     IN/OUT setting<br>
                     ・<code>act</code>: io<br>
-                    ・<code>line</code>: 0 - 7<br>
-                    ・<code>v</code>: 1:Output, 0:Input
+                    ・<code>gp</code>: 0 - 7<br>
+                    ・<code>v</code>: 1:OUT, 0:IN
                 </li>
                 <li>
                     Pullup setting(Input only)<br>
                     ・<code>act</code>: pup<br>
-                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>gp</code>: 0 - 7<br>
                     ・<code>v</code>: 1:Enable, 0:Disabled
                 </li>
                 <li>
-                    Sets the output state of the specified line.<br>
+                    Sets the output state of the specified gp.<br>
                     ・<code>act</code>: set<br>
-                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>gp</code>: 0 - 7<br>
                     ・<code>v</code>: 1:HIGH, 0:LOW
                 </li>
                 <li>
-                    Reads the state of the specified line.<br>
+                    Reads the state of the specified gp.<br>
                     ・<code>act</code>: get<br>
-                    ・<code>line</code>: 0 - 7<br>
+                    ・<code>gp</code>: 0 - 7<br>
                 </li>      
             </ul>
-            <p>e.g.</p><pre>[{act: 'io', line: 1, v: 1}, {act: 'pup', line: 1, v: 1}, {act: 'set', line: 1, v: 1}, {act: 'get', line: 1}]</pre>
+            <p>e.g.</p><pre>[{act: 'io', gp: 1, v: 1}, {act: 'pup', gp: 1, v: 1}, {act: 'set', gp: 1, v: 1}, {act: 'get', gp: 1}]</pre>
         </dd>
     </dl>
     <h3>Outputs</h3>

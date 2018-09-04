@@ -12,6 +12,7 @@ module.exports = function (RED) {
     var outputDir = __dirname + '/config/'
     var outputFile = outputDir + 'config.json'
     var nodeName = 'tp-initialize';
+    var execSync = require('child_process').execSync;
 
     // Node-Red起動時に、flows.jsonの中身を確認し、このノードを先頭に移動する(デプロイ時は対応しない)
     // このノードを複数置いても、タブを無効にしても必ず1回のみ実行される(問題なし)
@@ -23,6 +24,10 @@ module.exports = function (RED) {
 
         // config
         this.make = config.make;
+        var connect_flg = false;
+        if (config.connect) {
+            connect_flg = true;
+        }
 
         // start
         node.log("start");
@@ -48,7 +53,8 @@ module.exports = function (RED) {
         var tc = new TpCommon("tpConnect", node);
 
         // Launch python
-        node.child = spawn(tc.cmdPy(), ["-u", tc.getPyPath("tpConnect"), outputFile]);
+        //node.child = spawn(tc.cmdPy(), ["-u", tc.getPyPath("tpConnect"), outputFile, connect_flg]);
+        node.child = spawn("sudo", [tc.cmdPy(), "-u", tc.getPyPath("tpConnect"), outputFile, connect_flg]);
         node.child.on('error', function (err) {
             node.error("python fail: " + err);
         });
@@ -83,7 +89,8 @@ module.exports = function (RED) {
             node.status({ fill: "grey", shape: "ring", text: "initialize.status.stopped" });
 
             if (node.child != null) {
-                node.child.kill('SIGINT');
+                //node.child.kill('SIGINT');
+                execSync("sudo kill `ps aux | grep [p]y/tpConnect.py | awk '{print $2;}'`");
                 node.child = null;
                 done();
             } else {
