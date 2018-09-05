@@ -125,6 +125,7 @@ class TpP3Interface():
             # SPI読み込みスレッド開始
             if self.p3_flg == 2:
                 thread.start_new_thread(self.__spi_access_thread, ())
+            time.sleep(1) # thread安定待ち
 
     def board_init(self):
         """ 基板初期化
@@ -483,6 +484,19 @@ class TpP3Interface():
             c_return = self.__fpga_lattice_call(slot, 0, file_path)
             if c_return != 0:
                 raise ValueError('tpFPGA_write error! : c_return = ' + str(c_return))
+            self.gpio_write(slot, 1, 1)
+        else:
+            pass
+
+    def tpFPGA_debug(self, slot):
+        """ #26 記録開始
+            slot      : 1 ~ 10
+        """
+        #print('tpFPGA_debug', slot)
+        if gTpEnv:
+            c_return = self.__fpga_lattice_call(slot, 9, '')
+            if c_return != 0:
+                raise ValueError('tpFPGA_debug error! : c_return = ' + str(c_return))
         else:
             pass
 
@@ -507,7 +521,11 @@ class TpP3Interface():
         #print('tp26_get_record', slot)
         if gTpEnv:
             c_return = self.__fpga_lattice_call(slot, 2, '')
-            if c_return != 0:
+            if c_return == -20:
+                raise tpUtils.TpCheckError('#26 No Data.')
+            elif c_return == -21:
+                raise tpUtils.TpCheckError('#26 Recording failed.')
+            elif c_return != 0:
                 raise ValueError('tp26_get_record error! : c_return = ' + str(c_return))
             # 記録結果読み込み
             with open('/dev/shm/tp26_record.bin', 'rb') as f:

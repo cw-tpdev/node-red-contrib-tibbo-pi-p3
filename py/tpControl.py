@@ -46,12 +46,12 @@ class TpControl:
             data = json.loads(rcv_msg.decode())
 
             # 鳴らす時間
-            time = data['time']
+            btime = data['time']
             # パターン
             pattern = data['ptn']
 
             # ブザーの制御を行う
-            self.tp_inter.rp_buzzer(time, pattern)
+            self.tp_inter.rp_buzzer(btime, pattern)
 
             # 戻り値は無し
             return

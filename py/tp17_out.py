@@ -3,8 +3,6 @@ from lib.tcpClient import TcpClient
 import tpUtils
 import sys
 from constant import *
-import json
-import time
 from tp16_out import Tp16_out
 
 

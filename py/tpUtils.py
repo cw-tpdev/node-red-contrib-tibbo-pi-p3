@@ -4,6 +4,13 @@ tpUtils 共通処理
 import sys
 
 
+class TpCheckError(Exception):
+    """
+    ユーザへのエラー確認用の例外
+    """
+    pass
+
+
 def stdout(msg):
     """
     標準出力します。

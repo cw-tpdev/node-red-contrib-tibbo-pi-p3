@@ -467,14 +467,19 @@ class TpBoardInterface:
         slot_num = tpUtils.slot_str_to_int(setting['slot'])
         if slot_num % 2 == 0: # 奇数slotのみ対応
             raise ValueError('Serial slot error! : ' + str(slot_num))
-        # 通信情報設定
-        baud = setting['settings']['baudRate']
-        flow = setting['settings']['hardwareFlow']
-        parity = setting['settings']['parity']
-        sep_kind = setting['settings']['splitInput']
-        sep_char = setting['settings']['onTheCharactor']
-        sep_time = setting['settings']['afterATimeoutOf']
-        sep_leng = setting['settings']['intoFixedLengthOf']
+        try:
+            # 通信情報設定
+            baud = setting['settings']['baudRate']
+            flow = setting['settings']['hardwareFlow']
+            parity = setting['settings']['parity']
+            sep_kind = setting['settings']['splitInput']
+            sep_char = setting['settings']['onTheCharactor']
+            sep_time = setting['settings']['afterATimeoutOf']
+            sep_leng = setting['settings']['intoFixedLengthOf']
+        except Exception:
+            # 設定エラー
+            raise tpUtils.TpCheckError('Please check the serial setting.')
+
         #print(slot_num, baud, flow, parity, sep_char, sep_time, sep_leng)
         baud_num = int(baud)
         flow_num = 1 if flow == 'on' else 0
@@ -595,6 +600,9 @@ class TpBoardInterface:
             elif pin['status'] == 'OUT':
                 line_num = tpUtils.line_str_to_int(pin['name'])
                 self.__board.gpio_init(slot_num, line_num, LINE_SETTING_D_OUT)
+            elif pin['status'] == 'IN_Analog':
+                line_num = tpUtils.line_str_to_int(pin['name'])
+                self.__board.gpio_init(slot_num, line_num, LINE_SETTING_A_IN)
         return
 
     def gpio_event_init(self, slot, line):

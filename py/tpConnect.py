@@ -20,13 +20,6 @@ class TpConnect:
         コンストラクタ
         """
 
-        # 設定の保持
-        self.tp_config = TpConfig()
-
-        # 制御用インスタンス
-        self.tp_control = TpControl(
-            self.tp_config.get_settings(), self.__send_data)
-
         # TCPサーバー保持用
         self.tcp_server_list = {}
 
@@ -35,6 +28,13 @@ class TpConnect:
 
         # 外部からの接続可否
         self.connect_flg = connect_flg
+
+        # 設定の保持
+        self.tp_config = TpConfig()
+
+        # 制御用インスタンス
+        self.tp_control = TpControl(
+            self.tp_config.get_settings(), self.__send_data)
 
     def start(self):
         """
@@ -159,6 +159,10 @@ class TpConnect:
 
             return self.tp_control.control(info, rcv_msg)
 
+        except tpUtils.TpCheckError as e:
+            # トレースは出さず、メッセージのみ
+            tpUtils.stderr(str(e.args))
+            return "-- FAIL ---"
         except Exception as e:
             # 失敗
             tpUtils.stderr(traceback.format_exc())
@@ -183,6 +187,10 @@ class TpConnect:
                 tcp_srv = self.tcp_server_list[port]
                 tcp_srv.send(send_msg)
 
+        except tpUtils.TpCheckError as e:
+            # トレースは出さず、メッセージのみ
+            tpUtils.stderr(str(e.args))
+            return "-- FAIL ---"
         except Exception as e:
             # 失敗
             tpUtils.stderr(traceback.format_exc())
@@ -199,8 +207,16 @@ if __name__ == '__main__':
     if (len(argvs) > 2 and argvs[2] == 'true'):
         connect_flg = argvs[2]
 
-    # インスタンス生成
-    tp_connect = TpConnect(setting_file, connect_flg)
+    try:
+
+        # インスタンス生成
+        tp_connect = TpConnect(setting_file, connect_flg)
+
+    except tpUtils.TpCheckError as e:
+        # トレースは出さず、メッセージのみ
+        tpUtils.stderr(str(e.args))
+        tpUtils.stderr('Tibbo-Pi failed to start up.')
+        sys.exit(0)
 
     # サーバ起動
     tp_connect.start()

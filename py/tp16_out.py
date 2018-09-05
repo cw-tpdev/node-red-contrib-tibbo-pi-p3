@@ -4,6 +4,7 @@ import sys
 from constant import *
 import json
 from tp31 import Tp31
+import time
 
 
 class Tp16_out(Tp31):
@@ -28,6 +29,8 @@ class Tp16_out(Tp31):
 
         # リセット
         self.pic_reg_reset()
+
+        time.sleep(0.1)
 
         # init
         self.pic_reg_write(0x011D, [0x20, 0x00])  # APFCON0,1
