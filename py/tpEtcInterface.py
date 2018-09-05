@@ -18,7 +18,7 @@ class TpEtcInterface:
         # #22
         self.__inter = board_inter
         self.__tp22_wait_max_ms = 100
-        self.__tp22_retry_num = 10
+        self.__tp22_retry_num = 100
         self.__RTD_A = 3.9080e-3
         self.__RTD_B = -5.870e-7
 
