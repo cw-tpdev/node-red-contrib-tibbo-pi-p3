@@ -45,43 +45,54 @@ class Tp35:
         値を取得します。
         """
 
-        # Lock
-        self.tp00.lock(self.slot)
-        try:
-            send_data = []
-            send_data.append(
-                {"act": "w", "add": self.i2c_addr, "cmd": 0x12, "v": [0x00]})
-            self.tp00.send(json.dumps(send_data))
-            time.sleep(0.003)
+        # リトライ処理
+        for _ in range(1, 10):
 
-            send_data = []
-            send_data.append(
-                {"act": "r", "add": self.i2c_addr, "cmd": 0x00, "len": 12})
-            _result = self.tp00.send(json.dumps(send_data))
+            # Lock
+            self.tp00.lock(self.slot)
+            try:
+                send_data = []
+                send_data.append(
+                    {"act": "w", "add": self.i2c_addr, "cmd": 0x12, "v": [0x00]})
+                self.tp00.send(json.dumps(send_data))
+                time.sleep(0.003)
 
-        finally:
-            # unLock
-            self.tp00.unlock(self.slot)
+                send_data = []
+                send_data.append(
+                    {"act": "r", "add": self.i2c_addr, "cmd": 0x00, "len": 12})
+                _result = self.tp00.send(json.dumps(send_data))
 
-        result_data = json.loads(_result.decode())
-        data = result_data[0]
+            finally:
+                # unLock
+                self.tp00.unlock(self.slot)
 
-        a0 = self.__coefficient(data[4], data[5], 16, 3, 0)
-        b1 = self.__coefficient(data[6], data[7], 16, 13, 0)
-        b2 = self.__coefficient(data[8], data[9], 16, 14, 0)
-        c12 = self.__coefficient(data[10], data[11], 14, 13, 9)
+            result_data = json.loads(_result.decode())
+            data = result_data[0]
 
-        padc = (data[0] << 8 | data[1]) >> 6
-        tadc = (data[2] << 8 | data[3]) >> 6
+            a0 = self.__coefficient(data[4], data[5], 16, 3, 0)
+            b1 = self.__coefficient(data[6], data[7], 16, 13, 0)
+            b2 = self.__coefficient(data[8], data[9], 16, 14, 0)
+            c12 = self.__coefficient(data[10], data[11], 14, 13, 9)
 
-        c12x2 = c12 * tadc
-        a1 = b1 + c12x2
-        a1x1 = a1 * padc
-        y1 = a0 + a1x1
-        a2x2 = b2 * tadc
-        pcomp = y1 + a2x2
+            padc = (data[0] << 8 | data[1]) >> 6
+            tadc = (data[2] << 8 | data[3]) >> 6
 
-        pressure = (pcomp * 65 / 1023) + 50
+            c12x2 = c12 * tadc
+            a1 = b1 + c12x2
+            a1x1 = a1 * padc
+            y1 = a0 + a1x1
+            a2x2 = b2 * tadc
+            pcomp = y1 + a2x2
+
+            pressure = (pcomp * 65 / 1023) + 50
+
+            if pressure == 50:
+                # 失敗
+                time.sleep(0.03)
+                continue
+
+            break
+
         return round(pressure, 2)
 
 

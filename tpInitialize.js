@@ -54,7 +54,8 @@ module.exports = function (RED) {
 
         // Launch python
         //node.child = spawn(tc.cmdPy(), ["-u", tc.getPyPath("tpConnect"), outputFile, connect_flg]);
-        node.child = spawn("sudo", [tc.cmdPy(), "-u", tc.getPyPath("tpConnect"), outputFile, connect_flg]);
+        // __pycache__は生成しない
+        node.child = spawn("sudo", [tc.cmdPy(), "-uB", tc.getPyPath("tpConnect"), outputFile, connect_flg]);
         node.child.on('error', function (err) {
             node.error("python fail: " + err);
         });

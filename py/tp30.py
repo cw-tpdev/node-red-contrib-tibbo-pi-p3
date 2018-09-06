@@ -47,14 +47,19 @@ class Tp30:
                 # 失敗
                 time.sleep(0.03)
                 continue
+
+            # データから変換
+            humd = ((result[0] & 0x3F) * 256 + result[1]) / 16383 * 100
+            temp = (result[2] * 64 + (result[3] >> 2)) / 16383 * 165 - 40
+            humd = round(humd, 1)
+            temp = round(temp, 1)
+
+            if humd == 98.4 or temp == -40:
+                # 失敗
+                time.sleep(0.03)
+                continue
             
             break
-
-        # データから変換
-        humd = ((result[0] & 0x3F) * 256 + result[1]) / 16383 * 100
-        temp = (result[2] * 64 + (result[3] >> 2)) / 16383 * 165 - 40
-        humd = round(humd, 1)
-        temp = round(temp, 1)
 
         rtn = {}
         rtn['humd'] = humd
