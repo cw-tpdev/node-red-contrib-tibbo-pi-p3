@@ -334,6 +334,14 @@ class TpP3Interface():
             self.__line_set(slot, line, LINE_SETTING_D_OUT)
         addr = int((slot - 1) / 2) + 0x29
         dmy = [0]
+        while True: #bufferアクセス中なら待つ
+            if any(self.__spi_write_buf_flg[0x29:0x2E]):
+                time.sleep(0.001)
+                continue
+            if self.__spi_write_buf_flg_lock.locked():
+                time.sleep(0.001)
+                continue
+            break
         self.__gpio_lock.acquire(1) # 過去データorするため排他開始
         try:
             old = self.__pic_spi_access(addr, dmy, no_use_buf_flg)[0]
@@ -994,7 +1002,21 @@ class TpP3Interface():
         #print('__spi_write_buf_put', self.__spi_write_buf_side)
         #print('__spi_write_buf_put', self.__spi_write_buf_side, list(map(hex, self.__spi_write_buf[self.__spi_write_buf_side][0x29:0x2E])))
         self.__spi_write_buf_lock.acquire(1)
-        self.__pic_spi_access(self.__spi_write_start_addr + PIC_WRITE_ADDR, self.__spi_write_buf[self.__spi_write_buf_side][self.__spi_write_start_addr:self.__spi_write_end_addr + 1], True)
+
+        retry = 0
+        out = self.__spi_write_buf[self.__spi_write_buf_side][self.__spi_write_start_addr:self.__spi_write_end_addr + 1]
+        while True:
+            self.__pic_spi_access(self.__spi_write_start_addr + PIC_WRITE_ADDR, out, True)
+            ret = self.__pic_spi_access(self.__spi_write_start_addr, out, True)
+            if out != ret:
+                retry += 1
+                if retry > 10: 
+                    #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
+                    raise ValueError('__spi_write_buf_put retry error!')
+                    break
+                continue
+            break
+
         self.__spi_write_buf_side = 0 if self.__spi_write_buf_side == 1 else 1
         self.__spi_write_buf_lock.release()
         #print(self.__spi_write_buf)
