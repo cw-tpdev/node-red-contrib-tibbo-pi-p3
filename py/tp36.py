@@ -46,96 +46,106 @@ class Tp36:
         値を取得します。
         """
 
-        # Lock
-        self.tp00.lock(self.slot)
-        try:
-            # set measure bit
-            send_data = []
-            send_data.append(
-                {"act": "w", "add": self.i2c_addr, "cmd": 0x2d, "v": [0x08]})
-            self.tp00.send(json.dumps(send_data))
-            time.sleep(0.1)
+        # リトライ処理
+        for _ in range(1, 10):
 
-            send_data = []
-            send_data.append(
-                {"act": "r", "add": self.i2c_addr, "cmd": 0x32, "len": 6})
-            _result = self.tp00.send(json.dumps(send_data))
+            # Lock
+            self.tp00.lock(self.slot)
+            try:
+                # set measure bit
+                send_data = []
+                send_data.append(
+                    {"act": "w", "add": self.i2c_addr, "cmd": 0x2d, "v": [0x08]})
+                self.tp00.send(json.dumps(send_data))
+                time.sleep(0.1)
 
-            result_data = json.loads(_result.decode())
-            result_data = result_data[0]
+                send_data = []
+                send_data.append(
+                    {"act": "r", "add": self.i2c_addr, "cmd": 0x32, "len": 6})
+                _result = self.tp00.send(json.dumps(send_data))
 
-            data0 = result_data[1]
-            data1 = result_data[0]
-            data2 = result_data[3]
-            data3 = result_data[2]
-            data4 = result_data[5]
-            data5 = result_data[4]
+                result_data = json.loads(_result.decode())
+                result_data = result_data[0]
 
-            hi_byte = data0
-            lo_byte = data1
-            x = hi_byte*256+lo_byte
+                data0 = result_data[1]
+                data1 = result_data[0]
+                data2 = result_data[3]
+                data3 = result_data[2]
+                data4 = result_data[5]
+                data5 = result_data[4]
 
-            hi_byte = data2
-            lo_byte = data3
-            y = hi_byte*256+lo_byte
+                hi_byte = data0
+                lo_byte = data1
+                x = hi_byte*256+lo_byte
 
-            hi_byte = data4
-            lo_byte = data5
-            z = hi_byte*256+lo_byte
+                hi_byte = data2
+                lo_byte = data3
+                y = hi_byte*256+lo_byte
 
-            send_data = []
-            send_data.append(
-                {"act": "r", "add": self.i2c_addr, "cmd": 0x2e, "len": 1})
-            _result = self.tp00.send(json.dumps(send_data))
+                hi_byte = data4
+                lo_byte = data5
+                z = hi_byte*256+lo_byte
 
-            result_data = json.loads(_result.decode())
-            tmp = result_data[0][0]
-            tmp = tmp & 0xFE
+                send_data = []
+                send_data.append(
+                    {"act": "r", "add": self.i2c_addr, "cmd": 0x2e, "len": 1})
+                _result = self.tp00.send(json.dumps(send_data))
 
-            send_data = []
-            send_data.append(
-                {"act": "w", "add": self.i2c_addr, "cmd": 0x2e, "v": [tmp]})
-            send_data.append(
-                {"act": "w", "add": self.i2c_addr, "cmd": 0x2d, "v": [0x00]})
-            self.tp00.send(json.dumps(send_data))
+                result_data = json.loads(_result.decode())
+                tmp = result_data[0][0]
+                tmp = tmp & 0xFE
 
-        finally:
-            # unLock
-            self.tp00.unlock(self.slot)
+                send_data = []
+                send_data.append(
+                    {"act": "w", "add": self.i2c_addr, "cmd": 0x2e, "v": [tmp]})
+                send_data.append(
+                    {"act": "w", "add": self.i2c_addr, "cmd": 0x2d, "v": [0x00]})
+                self.tp00.send(json.dumps(send_data))
 
-        # 12G
-        SIGN_MASK = 0xE000
-        DATA_MASK = 0x1FFF
+            finally:
+                # unLock
+                self.tp00.unlock(self.slot)
 
-        x = x
-        if (x & SIGN_MASK) != 0:
-            x = x & DATA_MASK
-            x_value = DATA_MASK-x
-            x_value = (-x_value)
-        else:
-            x_value = x & DATA_MASK
+            # 12G
+            SIGN_MASK = 0xE000
+            DATA_MASK = 0x1FFF
 
-        y = y
-        if (y & SIGN_MASK) != 0:
-            y = y & DATA_MASK
-            y_value = DATA_MASK-y
-            y_value = (-y_value)
-        else:
-            y_value = y & DATA_MASK
+            x = x
+            if (x & SIGN_MASK) != 0:
+                x = x & DATA_MASK
+                x_value = DATA_MASK-x
+                x_value = (-x_value)
+            else:
+                x_value = x & DATA_MASK
 
-        z = z
-        if (z & SIGN_MASK) != 0:
-            z = z & DATA_MASK
-            z_value = DATA_MASK-z
-            z_value = (-z_value)
-        else:
-            z_value = z & DATA_MASK
+            y = y
+            if (y & SIGN_MASK) != 0:
+                y = y & DATA_MASK
+                y_value = DATA_MASK-y
+                y_value = (-y_value)
+            else:
+                y_value = y & DATA_MASK
 
-        #'The scale is -4096 (-12G) to +4095 (+12G).
-        # mGに変換
-        x_value = (x_value*2930)/1000
-        y_value = (y_value*2930)/1000
-        z_value = (z_value*2930)/1000
+            z = z
+            if (z & SIGN_MASK) != 0:
+                z = z & DATA_MASK
+                z_value = DATA_MASK-z
+                z_value = (-z_value)
+            else:
+                z_value = z & DATA_MASK
+
+            #'The scale is -4096 (-12G) to +4095 (+12G).
+            # mGに変換
+            x_value = (x_value*2930)/1000
+            y_value = (y_value*2930)/1000
+            z_value = (z_value*2930)/1000
+
+            if x_value == 0 and y_value == 0 and z_value == 0:
+                # 失敗
+                time.sleep(0.03)
+                continue
+
+            break
 
         return {"x": x_value, "y": y_value, "z": z_value}
 
