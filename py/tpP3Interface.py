@@ -334,17 +334,9 @@ class TpP3Interface():
             self.__line_set(slot, line, LINE_SETTING_D_OUT)
         addr = int((slot - 1) / 2) + 0x29
         dmy = [0]
-        while True: #bufferアクセス中なら待つ
-            if any(self.__spi_write_buf_flg[0x29:0x2E]):
-                time.sleep(0.001)
-                continue
-            if self.__spi_write_buf_flg_lock.locked():
-                time.sleep(0.001)
-                continue
-            break
         self.__gpio_lock.acquire(1) # 過去データorするため排他開始
         try:
-            old = self.__pic_spi_access(addr, dmy, no_use_buf_flg)[0]
+            old = self.__spi_write_buf_read(addr, dmy)[0]
             # MSB:S1A,S1B,S1C,S1D,S2A,S2B,S2C,S2D:LSB のようなならび
             bit = 1 << (4 - line)
             if slot % 2 == 1: # 奇数slotは下位4bit
@@ -1012,12 +1004,12 @@ class TpP3Interface():
                 retry += 1
                 if retry > 10: 
                     #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
-                    raise ValueError('__spi_write_buf_put retry error!')
+                    raise ValueError('__spi_write_buf_put retry error!') 
                     break
                 continue
             break
 
-        self.__spi_write_buf_side = 0 if self.__spi_write_buf_side == 1 else 1
+        #self.__spi_write_buf_side = 0 if self.__spi_write_buf_side == 1 else 1 # 0面のみ使用
         self.__spi_write_buf_lock.release()
         #print(self.__spi_write_buf)
         return
@@ -1043,28 +1035,33 @@ class TpP3Interface():
         """
         self.__spi_write_buf_flg_lock.acquire(1)
         self.__spi_write_buf_flg[addr] = 1 # 書き込みフラグ
-        lock_check = self.__spi_write_buf_lock.locked()
-        if lock_check == True:
-            # lock中なら、反対側のbufferを利用する。waitが入るので、すぐにbufferは書き換わらない
-            side = 0 if self.__spi_write_buf_side == 1 else 1
-            self.__spi_write_buf[side][addr:addr+len(vals)] = vals[0:len(vals)]
-            #print('__spi_write_buf_write', hex(addr), vals, lock_check, self.__spi_write_buf_side)
-        else:
-            # lockしていないなら、bufferアクセス中にputされないようにlockする
-            self.__spi_write_buf_lock.acquire(1)
-            side = 0 if self.__spi_write_buf_side == 1 else 1
-            self.__spi_write_buf[side][addr:addr+len(vals)] = vals[0:len(vals)]
-            self.__spi_write_buf_lock.release()
-            #print('__spi_write_buf_write', hex(addr), vals, lock_check, self.__spi_write_buf_side)
-            #print('__spi_write_buf_write', self.__spi_write_buf_flg[0x29:0x2E])
+
+        self.__spi_write_buf_lock.acquire(1)
+        #side = 0 if self.__spi_write_buf_side == 1 else 1 # 0面のみ使用
+        self.__spi_write_buf[self.__spi_write_buf_side][addr:addr+len(vals)] = vals[0:len(vals)]
+        self.__spi_write_buf_lock.release()
+        #print('__spi_write_buf_write', hex(addr), vals, lock_check, self.__spi_write_buf_side)
+        #print('__spi_write_buf_write', self.__spi_write_buf_flg[0x29:0x2E])
         self.__spi_write_buf_flg_lock.release()
         return vals
 
-    def __spi_read_buf_read(self, addr, vals):
-        """ バッファの内容を返す
+    def __spi_write_buf_read(self, addr, vals):
+        """ writeバッファの内容を返す
             addr : レジスタアドレス
             vals : 書き込みデータ（リスト）
-            戻り : バッファ委からの読み込み値
+            戻り : バッファからの読み込み値
+        """
+        self.__spi_write_buf_lock.acquire(1)
+        ret = self.__spi_write_buf[self.__spi_write_buf_side][addr:addr+len(vals)]
+        self.__spi_write_buf_lock.release()
+        #print('__spi_write_buf_write:not locked', side, hex(addr), list(map(hex, ret)))
+        return ret
+
+    def __spi_read_buf_read(self, addr, vals):
+        """ readバッファの内容を返す
+            addr : レジスタアドレス
+            vals : 書き込みデータ（リスト）
+            戻り : バッファからの読み込み値
         """
         if addr >= self.__spi_write_start_addr and addr <= self.__spi_write_end_addr:
             while True: # 書き込みフラグが立っていたらまつ（bufferにreadでクリアされる）
