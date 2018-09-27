@@ -59,12 +59,13 @@ TpCommon.prototype.execPy = function (args) {
         // 起動
         this._node.child = spawn(this.cmdPy(), ["-u", this.getPyPath(this._name)].concat(args));
         this._node.child.on('error', function (err) {
-            inst._node.error("python fail: " + err);
+            inst._node.error("python fail: " + err, {});
         });
 
         // Python実行中のエラー出力
         this._node.child.stderr.on('data', function (data) {
-            inst._node.error("err: " + data);
+            // cathhできるように第二引数を指定
+            inst._node.error("err: " + data, {});
         });
 
         // 終了時

@@ -243,6 +243,7 @@ class TpP3Interface():
             try:
                 c_ret = self.__spi_access_lib.spi_access(mode, speed, endian, address, wait_ms, slot, len(data), dat_str.encode('utf-8'), self.__spi_buf)
                 ret_str = str(repr(self.__spi_buf.value))[2:-1]
+                #print('spi_access', slot, mode, speed, endian, wait_ms, hex(address), list(map(hex, vals)), ret_str)
             except:
                 raise
             finally:
@@ -677,10 +678,8 @@ class TpP3Interface():
                 if buff_num == 0: break
                 dmy = [0] * buff_num
                 data = self.__pic_spi_access(dat_addr, dmy)
-                #print(slot, buff_num, data)
+                #print(slot, buff_num, list(map(hex, data)))
                 self.serial_event_callback(slot, data)
-
-    # 内部メソッド ---
 
     def __serial_data(self, baud, flow, parity):
         # ボーレート
@@ -770,25 +769,32 @@ class TpP3Interface():
         #print('gpio_read', slot, line, hex(addr), hex(dat), ret)
         return ret
 
-    def __gpio_edge_check(self, dat, up, slot, line):
+    def __gpio_edge_check(self, dat, cur_in, up, slot, line):
         """ pinのエッジを調べる
-            dat  : PICの0x33～0x3Cのエッジ情報10byte
-            up   : 立ち上がりエッジを調べる場合True、下がりならFalse
-            slot : 1～10
-            line : 1～4
+            dat    : PICの0x33～0x3Cのエッジ情報10byte
+            cur_in : PICの0x2E～0x32の入力情報5byte
+            up     : 立ち上がりエッジを調べる場合True、下がりならFalse
+            slot   : 1～10
+            line   : 1～4
+            戻り   : エッジあり= 1, なし= 0
+                     入力現在地
         """
         #print('__gpio_edge_check', dat, up, slot, line)
         bit = 1 << (4 - line)
         if slot % 2 == 1: # 奇数slotは上位4bit
             bit <<= 4
         indx = int((slot - 1) / 2)
+        cur_indx = indx
         if up == False: indx += 5
         ret = 0 if dat[indx] & bit == 0 else 1
-        #print('__gpio_edge_check', slot, line, up, indx, dat[indx], ret)
-        return ret
+        curr = 0 if cur_in[cur_indx] & bit == 0 else 1
+        #print('__gpio_edge_check', slot, line, up, indx, dat[indx], ret, curr)
+        return ret, curr
 
-    def __gpio_event_callback(self, vals):
+    def __gpio_event_callback(self, vals, cur_in):
         """ GPIO入力に変化があった場合
+            vals   : PICの0x33～0x3Cのエッジ情報10byte
+            cur_in : PICの0x2E～0x32の入力情報5byte
             戻り : なし
         """
         #print('__gpio_event_callback', pin)
@@ -798,14 +804,18 @@ class TpP3Interface():
         #ret = self.__pic_spi_access(0x33, dat)
         ret = vals
         for elem in self.__gpio_in_edge_table:
-            # 立ち上がりエッジ確認
-            if self.__gpio_edge_check(ret, True, elem[0], elem[1]) == 1:
-                #print('Rise callback : slot =', elem[0], 'line =', elem[1])
-                self.gpio_event_callback(elem[0], elem[1], 1)
-            # 立ち下がりエッジ確認
-            if self.__gpio_edge_check(ret, False, elem[0], elem[1]) == 1:
-                #print('Fall callback : slot =', elem[0], 'line =', elem[1])
-                self.gpio_event_callback(elem[0], elem[1], 0)
+            up_edge, curr = self.__gpio_edge_check(ret, cur_in, True, elem[0], elem[1])
+            down_edge, curr = self.__gpio_edge_check(ret, cur_in, False, elem[0], elem[1])
+            if up_edge == 1 and down_edge == 1:
+                if curr == 1:
+                    self.gpio_event_callback(elem[0], elem[1], 0)
+                    self.gpio_event_callback(elem[0], elem[1], 1)
+                else:
+                    self.gpio_event_callback(elem[0], elem[1], 1)
+                    self.gpio_event_callback(elem[0], elem[1], 0)
+            else:
+                self.gpio_event_callback(elem[0], elem[1], up_edge)
+
         return
 
     def __rp_button_callback(self, pin):
@@ -934,6 +944,7 @@ class TpP3Interface():
         """ PICのレジスタ情報をバッファに読み書きするthread
         """
         old_in = [0] * 5 # GPIO入力エッジ確認用
+        pulse_chk = [0] * 10 # 瞬時パルス確認用
         while True:
 
             # 読み込み
@@ -953,7 +964,11 @@ class TpP3Interface():
                 cur_in = self.__spi_read_buf_read(0x2E, old_in)
                 check_flg, in_edge = self.__gpio_in_edge_check(old_in, cur_in)
                 if check_flg:
-                    self.__gpio_event_callback(in_edge)
+                    self.__gpio_event_callback(in_edge, cur_in)
+                else: # 瞬時パルス確認
+                    pulse_chk = self.__spi_read_buf_read(0x33, pulse_chk)
+                    if pulse_chk.count(0) != 10:
+                        self.__gpio_event_callback(pulse_chk, cur_in)
                 old_in = cur_in[:]
 
             # wait
@@ -1002,6 +1017,7 @@ class TpP3Interface():
             ret = self.__pic_spi_access(self.__spi_write_start_addr, out, True)
             if out != ret:
                 retry += 1
+                #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
                 if retry > 10: 
                     #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
                     raise ValueError('__spi_write_buf_put retry error!') 

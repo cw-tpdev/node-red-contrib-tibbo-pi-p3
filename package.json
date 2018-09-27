@@ -41,13 +41,14 @@
       "tp57": "tp57.js",
       "tp58": "tp58.js",
       "tp59": "tp59.js",
+      "tpb01": "tpb01.js",
       "tpcBuzzer": "tpcBuzzer.js",
       "tpcLed": "tpcLed.js",
       "tpcButton": "tpcButton.js",
       "tpConfigSerial": "tpConfigSerial.js"
     }
   },
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "Node-RED nodes for Tibbo-Pi P3",
   "main": "tpInitialize.js",
   "scripts": {},
