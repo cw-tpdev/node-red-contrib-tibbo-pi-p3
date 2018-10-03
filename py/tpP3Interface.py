@@ -797,7 +797,7 @@ class TpP3Interface():
             cur_in : PICの0x2E～0x32の入力情報5byte
             戻り : なし
         """
-        #print('__gpio_event_callback', pin)
+        #print('__gpio_event_callback', list(map(hex, vals)), list(map(hex, cur_in)))
         # 全エッジ情報読み出し
         dat = [0] * 10
         #print('__gpio_event_callback after_read_get', pin)
@@ -813,7 +813,7 @@ class TpP3Interface():
                 else:
                     self.gpio_event_callback(elem[0], elem[1], 1)
                     self.gpio_event_callback(elem[0], elem[1], 0)
-            else:
+            elif up_edge == 1 or down_edge == 1:
                 self.gpio_event_callback(elem[0], elem[1], up_edge)
 
         return
