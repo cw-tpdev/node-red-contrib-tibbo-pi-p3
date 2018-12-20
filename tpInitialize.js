@@ -45,7 +45,7 @@ module.exports = function (RED) {
 
         } catch (err) {
             // fail
-            node.warn("error : " + err);
+            node.error("error : " + err);
             return
         }
 
@@ -62,7 +62,14 @@ module.exports = function (RED) {
 
         // Python error
         node.child.stderr.on('data', function (data) {
-            node.error("err: " + data);
+
+            if (data.indexOf('Fatal Error ! Board FW update error!') > 0) {
+                // f/w update failed
+                node.status({ fill: "red", shape: "dot", text: "initialize.status.fwUpdateFailed" });
+                node.error("data: " + data);
+            } else {
+                node.error("err: " + data);
+            }
         });
 
         // python stdout
@@ -74,6 +81,10 @@ module.exports = function (RED) {
                 if (d[i].indexOf('Successfully connected!') === 0) {
                     // started
                     node.status({ fill: "green", shape: "dot", text: "initialize.status.started" });
+                } else if (d[i].indexOf('Board FW updating...') === 0) {
+                    // f/w update
+                    node.status({ fill: "yellow", shape: "dot", text: "initialize.status.fwUpdate" });
+                    node.log("data: " + d[i]);
                 } else {
                     node.log("data: " + d[i]);
                 }
@@ -522,7 +533,9 @@ module.exports = function (RED) {
             return false;
         });
         if (initList.length > 1) {
-            node.error("err: There are multiple tp initialize.");
+            // 2つ置かれた場合は、例外とし処理続行しない
+            //node.error("err: There are multiple tp initialize.");
+            throw new Error("There are multiple tp initialize.");
         }
 
         // スロット情報のみ抽出

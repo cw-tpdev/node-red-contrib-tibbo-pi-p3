@@ -45,10 +45,14 @@
       "tpcBuzzer": "tpcBuzzer.js",
       "tpcLed": "tpcLed.js",
       "tpcButton": "tpcButton.js",
-      "tpConfigSerial": "tpConfigSerial.js"
+      "tpConfigSerial": "tpConfigSerial.js",
+      "tpgRgbLcd": "tpgRgbLcd.js",
+      "tpgI2cTouchSensor": "tpgI2cTouchSensor.js",
+      "tpgI2cColorSensor": "tpgI2cColorSensor.js",
+      "tpgGestureSensor": "tpgGestureSensor.js"
     }
   },
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Node-RED nodes for Tibbo-Pi P3",
   "main": "tpInitialize.js",
   "scripts": {},

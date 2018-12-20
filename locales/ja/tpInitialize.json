@@ -7,7 +7,9 @@
 		},
         "status": {
             "started": "TP起動済",
-            "stopped": "TP停止"
+            "stopped": "TP停止",
+            "fwUpdate": "F/W 更新中...",
+            "fwUpdateFailed": "F/W 更新失敗"
         }
     }
 }

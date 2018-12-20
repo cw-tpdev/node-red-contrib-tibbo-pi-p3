@@ -7,7 +7,9 @@
 		},
         "status": {
             "started": "TP Started",
-            "stopped": "TP Stopped"
+            "stopped": "TP Stopped",
+            "fwUpdate": "F/W updating...",
+            "fwUpdateFailed": "F/W Update failed"
         }
     }
 }

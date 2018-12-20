@@ -1,0 +1,45 @@
+<script type="text/x-red" data-help-name="RgbLcd out">
+    <p>TP Grove - LCD RGB Backlight</p>
+    
+    <h3>Details</h3>
+    <p>LCD RGB Backlight</p>
+    <p>See <a href="https://tibbo-pi.co-works.co.jp/tutorial/grove_lcd_rgb_backlight/">Tutorial</a></p>
+
+    <h3>Inputs</h3>
+    <b>RGB</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            ・<code>act</code>: rgb<br>
+            ・<code>r</code>: red 0-255<br>
+            ・<code>g</code>: green 0-255<br>
+            ・<code>b</code>: blue 0-255<br>
+            <p>e.g.</p><pre>{act:"rgb", r:128, g:128, b:128}</pre>
+        </dd>
+    </dl>
+    <b>Text</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            ・<code>act</code>: text<br>
+            ・<code>v</code>: Text<br>
+            <p>e.g.</p><pre>{act:"text", v:"Text.."}</pre>
+        </dd>
+    </dl>
+
+    <b>Text Clear</b>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            ・<code>act</code>: clear<br>
+            <p>e.g.</p><pre>{act:"clear"}</pre>
+        </dd>
+    </dl>
+
+</script>

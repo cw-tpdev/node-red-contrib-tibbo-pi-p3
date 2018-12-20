@@ -24,6 +24,8 @@ class TpBoardInterface:
 
     def __init__(self, settings, callback_send):
         """ コンストラクタ
+            settings      : 上位側のconfig情報
+            callback_send : GPIO入力、およびSerial読み込み割り込み発生時のcallback関数
         """
         # データ初期化
         self.__serial_recv_buf = [[] for i in range(5)] # serail 5slotぶんのバッファslot 1,3,5,7,9 の順
@@ -51,6 +53,14 @@ class TpBoardInterface:
         self.spi_lock = thread.allocate_lock()
         if self.__board_kind == 'P2' or self.__board_kind == 'P3':
             self.__board.spi_lock_init(self.spi_lock)
+
+        # I2C健全性チェック
+        self.__board.i2c_check_before_init()
+
+        # FWバージョン確認
+        self.__board.check_pic_fw()
+        self.__board.read_pic_fw_ver(True)
+        tpUtils.stdout('Board FW ver = ' + str(self.get_pic_fw_ver()))
 
         # ボード初期化
         self.__board.board_init()
@@ -103,8 +113,8 @@ class TpBoardInterface:
     def gpio_in_out_init(self, slot, line, kind):
         """ GPIO実行時で設定
             slot : 1 ~ 10
-            line : 1 ~ 4
-            kind : 2 ~ 4(IN/OUT_OD/OUT)
+            line : 'A' ~ 'D'
+            kind : 0 ~ 4(NONE/ANALOG/IN/OUT_OD/OUT)
             戻り : なし
         """
         #print('gpio_in_out_init', slot, line, kind)
@@ -237,24 +247,6 @@ class TpBoardInterface:
         try:
             self.__board.i2c_select(slot_num)
             self.__board.i2c_write_tp22(val)
-        except:
-            raise
-        finally:
-            self.__board.i2c_select() # slot選択解除
-            self.i2c_lock.release()
-
-    def i2c_write_tp22_spi(self, slot, addr, val):
-        """ Tibbit#22, I2C書き込み(内部SPIデバイス)
-            slot : 'S01' ~ 'S10'
-            addr : SPIアドレス、0x80以上
-            val  : 書き込みデータ、1byteのみ
-            戻り : なし
-        """
-        slot_num = tpUtils.slot_str_to_int(slot)
-        self.i2c_lock.acquire(1)
-        try:
-            self.__board.i2c_select(slot_num)
-            self.__board.i2c_write_tp22(slot_num, val, addr)
         except:
             raise
         finally:
@@ -395,7 +387,7 @@ class TpBoardInterface:
         return
 
     def rp_buzzer(self, time_msec, pattern):
-        """ ラズパイブザー鳴動
+        """ ボードブザー鳴動
             time_msec : 鳴らす時間
             pattern   : パターン
             戻り      : なし
@@ -403,9 +395,10 @@ class TpBoardInterface:
         time_msec_int = int(time_msec) if type(time_msec) is str else time_msec
         pattern_int = int(pattern) if type(pattern) is str else pattern
         self.__buzzer_set(time_msec_int, pattern_int)
+        return
 
     def rp_led(self, num, val):
-        """ ラズパイLED制御
+        """ ボードLED制御
             num : LED番号
             val : 1/0, 1=On
             戻り: なし
@@ -416,7 +409,14 @@ class TpBoardInterface:
             self.__board.rp_led(num_int, val_int)
         else:
             raise ValueError('Board LED number error! 1~4 : ' + str(num_int))
-       
+        return
+
+    def get_pic_fw_ver(self):
+        """ PICのFWのバージョンを返す
+            戻り : FWのバージョン（数値）
+        """
+        return self.__board.get_pic_fw_ver()
+
     # 内部メソッド ---
 
     def __tp52_init(self, setting):

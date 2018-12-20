@@ -1,0 +1,27 @@
+<script type="text/x-red" data-help-name="I2CTouchSensor">
+    <p>TP Grove - I2C Touch Sensor</p>
+    
+    <h3>Details</h3>
+    <p>I2C Touch Sensor</p>
+    <p>See <a href="https://tibbo-pi.co-works.co.jp/tutorial/grove_i2c_touch_sensor/">Tutorial</a></p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dd>
+            none
+        </dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">array of number</span>
+        </dt>
+        <dd>
+            ch0 - ch11<br>
+            ・<code>0</code>: released<br>
+            ・<code>1</code>: touched<br>
+            <p>e.g.</p><pre>[1,0,0,0,0,0,0,0,0,0,0,0]</pre>
+        </dd>
+    </dl>
+
+</script>

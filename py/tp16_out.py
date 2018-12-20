@@ -27,59 +27,67 @@ class Tp16_out(Tp31):
         # 共通
         #-----------
 
-        # リセット
-        self.pic_reg_reset()
+        # Lock
+        self.tcp_client.lock(self.slot)
+        try:
 
-        time.sleep(0.1)
+            # リセット
+            self.pic_reg_reset()
 
-        # init
-        self.pic_reg_write(0x011D, [0x20, 0x00])  # APFCON0,1
-        self.pic_reg_write(0x029E, [0x24])  # CCPTMRS0
-        lat = self.pic_reg_read(0x010C, 3)  # LATA,B,C
-        lat[0] |= 0x03  # LATA
-        lat[2] |= 0x03  # LATC
-        self.pic_reg_write(0x010C, lat)
-        tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
-        tris[0] |= 0x03  # TRISA
-        tris[2] |= 0x03  # TRISC
-        self.pic_reg_write(0x008C, tris)
+            time.sleep(0.1)
 
-        #-----------
-        # ch:1
-        #-----------
+            # init
+            self.pic_reg_write(0x011D, [0x20, 0x00])  # APFCON0,1
+            self.pic_reg_write(0x029E, [0x24])  # CCPTMRS0
+            lat = self.pic_reg_read(0x010C, 3)  # LATA,B,C
+            lat[0] |= 0x03  # LATA
+            lat[2] |= 0x03  # LATC
+            self.pic_reg_write(0x010C, lat)
+            tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
+            tris[0] |= 0x03  # TRISA
+            tris[2] |= 0x03  # TRISC
+            self.pic_reg_write(0x008C, tris)
 
-        tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
-        ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
-        tris[0] |= 0x10  # RA4 入力へ
-        tris[2] &= 0xDF  # RC5 出力へ
-        ansel[0] &= 0xEF  # RA4 デジタル
-        ansel[2] &= 0xDF  # RC5 デジタル
-        self.pic_reg_write(0x008C, tris)
-        self.pic_reg_write(0x018C, ansel)
+            #-----------
+            # ch:1
+            #-----------
 
-        #-----------
-        # ch:2
-        #-----------
+            tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
+            ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
+            tris[0] |= 0x10  # RA4 入力へ
+            tris[2] &= 0xDF  # RC5 出力へ
+            ansel[0] &= 0xEF  # RA4 デジタル
+            ansel[2] &= 0xDF  # RC5 デジタル
+            self.pic_reg_write(0x008C, tris)
+            self.pic_reg_write(0x018C, ansel)
 
-        tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
-        ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
-        tris[2] |= 0x10  # RC4入力へ
-        tris[2] &= 0xF7  # RC3 出力へ
-        ansel[2] &= 0xE7  # RC3,4 デジタル
-        self.pic_reg_write(0x008C, tris)
-        self.pic_reg_write(0x018C, ansel)
+            #-----------
+            # ch:2
+            #-----------
 
-        #-----------
-        # ch:3
-        #-----------
+            tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
+            ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
+            tris[2] |= 0x10  # RC4入力へ
+            tris[2] &= 0xF7  # RC3 出力へ
+            ansel[2] &= 0xE7  # RC3,4 デジタル
+            self.pic_reg_write(0x008C, tris)
+            self.pic_reg_write(0x018C, ansel)
 
-        # config
-        tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
-        ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
-        tris[0] &= 0xFB  # RA2 出力へ
-        ansel[0] &= 0xFB  # RA2 デジタル
-        self.pic_reg_write(0x008C, tris)
-        self.pic_reg_write(0x018C, ansel)
+            #-----------
+            # ch:3
+            #-----------
+
+            # config
+            tris = self.pic_reg_read(0x008C, 3)  # TRISA,B,C
+            ansel = self.pic_reg_read(0x018C, 3)  # ANSELA,B,C
+            tris[0] &= 0xFB  # RA2 出力へ
+            ansel[0] &= 0xFB  # RA2 デジタル
+            self.pic_reg_write(0x008C, tris)
+            self.pic_reg_write(0x018C, ansel)
+
+        finally:
+            # unLock
+            self.tcp_client.unlock(self.slot)
 
     def send(self, msg):
         """

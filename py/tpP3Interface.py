@@ -12,6 +12,7 @@ try:
 except:
     gTpEnv = False
 import tpUtils
+import subprocess
 
 # 定数宣言 ---------------------------------------------------------------
 SLOT_SETTING_NONE = 0x00
@@ -31,6 +32,18 @@ PIC_RST_CMD = 0xA0
 PIC_WRITE_ADDR = 0x80
 
 PIC_READ_THREAD_WAIT = 0.1 # PICのレジスタread thread wait秒 
+
+PIC_NODE_RED_DIR = os.path.dirname(os.path.abspath(__file__)) + '/../'
+PIC_FW_VER_DIR = PIC_NODE_RED_DIR + 'py/fw/'
+PIC_FW_FILE = 'P3.*.hex'
+PIC_FW_FLG_FILE = PIC_NODE_RED_DIR + 'tp_file/tibbo_pi_pic_fw_'
+PIC_PICBERRY = 'picberry/picberry'
+PIC_FW_UPDATE_SH = 'board_fw_update.sh'
+PIC_INIT_LED_WIAT = 1
+
+SPI_RETRY_NUM = 10
+I2C_RETRY_NUM = 10
+
 # クラス宣言 -------------------------------------------------------------
 class TpP3Interface():
     global gTpEnv
@@ -47,6 +60,8 @@ class TpP3Interface():
             # ハードウェア設定
             GPIO.setmode(GPIO.BCM)
             self.__path = os.path.dirname(os.path.abspath(__file__))
+            subprocess.call(['/bin/sh', self.__path + '/ch.sh', PIC_FW_VER_DIR + PIC_PICBERRY])
+            subprocess.call(['/bin/sh', self.__path + '/ch.sh', PIC_FW_VER_DIR + PIC_FW_UPDATE_SH])
 
             # パラメータ定義
             self.__gpio_in_edge_table = []
@@ -66,7 +81,7 @@ class TpP3Interface():
 
             # Tibbit#22用設定
             self.__tp22_addr = 0x0D
-            self.__tp22_kbaud = 15
+            self.__tp22_kbaud = 10
 
             # i2c設定
             self.__i2c_kbaud_list = [100] * 11 # 0 = slot未選択時, default 100Kbps
@@ -75,6 +90,8 @@ class TpP3Interface():
 
 
             # P3用設定 ---------
+
+            self.pic_fw_ver = 0 # PIC-FWのバージョンを格納, 0は未定
 
             self.p3_flg = 2 # 0:P2, 1:line_setのみP3, 2:全部P3
 
@@ -111,7 +128,7 @@ class TpP3Interface():
 
     def pic_slot_init(self):
         """ PICスロット初期設定
-            戻り : なし
+            戻り: なし
         """
         if gTpEnv and self.p3_flg > 0:
             # GPIO OUT High固定用設定
@@ -126,9 +143,34 @@ class TpP3Interface():
             if self.p3_flg == 2:
                 thread.start_new_thread(self.__spi_access_thread, ())
             time.sleep(1) # thread安定待ち
+        return
+
+    def i2c_check_before_init(self):
+        """ I2Cが固まってないか確認する
+            board_initの前にチェックすること
+        """
+        if gTpEnv:
+            self.__subp_lock.acquire(1)
+            try:
+                sub = subprocess.Popen('i2cdetect -y 1',
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True)
+                ret = sub.wait()
+                ret_bin = sub.stdout.readlines()
+                ret_str = str(ret_bin[-1])[2:-3]
+            except:
+                raise tpUtils.TpCheckError('Fatal Error! initial I2C access error')
+            finally:
+                self.__subp_lock.release()
+            if ret_str.find('70 71 --') == -1:
+                raise tpUtils.TpCheckError('Fatal Error! initial I2C access error ' + ret_str)
+        return
 
     def board_init(self):
         """ 基板初期化
+            戻り: なし
         """
         if gTpEnv:
             GPIO.setwarnings(False)
@@ -136,13 +178,16 @@ class TpP3Interface():
             self.i2c_select(0)
             # PIC初期化
             self.__pic_spi_access(PIC_WRITE_ADDR, [PIC_RST_CMD])
-            time.sleep(1) # P3 PIC起動時LED点滅待ち
+            time.sleep(PIC_INIT_LED_WIAT) # P3 PIC起動時LED点滅待ち
+        return
 
     def spi_lock_init(self, lock):
         """ SPI Lock初期化
             lock : SPIアクセス時thread lock
+            戻り : なし
         """
         self.__spi_lock = lock
+        return
 
     def spi_init(self, slot, kbaud):
         """ SPI初期化
@@ -152,6 +197,7 @@ class TpP3Interface():
         """
         #print('spi_init', slot, kbaud)
         self.__slot_set_p3(slot, SLOT_SETTING_SPI)
+        return
 
     def i2c_init(self, slot, kbaud):
         """ I2C初期化
@@ -162,9 +208,16 @@ class TpP3Interface():
         #print('i2c_init', slot, kbaud)
         self.__i2c_kbaud_list[slot] = kbaud
         self.__slot_set_p3(slot, SLOT_SETTING_I2C)
+        return
 
     def serial_init(self, callback, slot, baud, flow, parity):
         """ Serial初期化
+            callback : Serial割り込み発生時のcallback関数
+            slot     : 1 ~ 10
+            baud     : 通信速度
+            flow     : フロー制御0=なし、1=あり
+            parity   : パリティ0=なし、1=奇数、2=偶数
+            戻り     : なし
         """
         #print('serial_init', callback, slot, baud, flow, parity)
         if slot % 2 == 0: return # 奇数slotのみ対応
@@ -187,8 +240,89 @@ class TpP3Interface():
                 # 取りこぼしが発生するのでevent登録ではなくloopで処理する
                 thread.start_new_thread(self.__check_serial_thread, ())
 
+    def read_pic_fw_ver(self, fatal_flg):
+        """ PICのFWバージョンを読み込む
+            fatal_flg : error時、例外を発生するかのフラグ
+            戻り      : PICのFWバージョン, read失敗なら-1, 未定なら0
+        """
+        self.pic_fw_ver = 0 # FW初期化、0なら未定ということ
+        if gTpEnv == False: return 0
+        count = 0
+        while True:
+            try:
+                ret = self.__pic_spi_access(0x00, [0], True)[0]
+            except:
+                ret = -1
+            finally:
+                if ret > 0 and ret < 32: 
+                    self.pic_fw_ver = ret
+                    break # バージョンは1～31
+                count += 1
+                if count >= 10:
+                    if fatal_flg:
+                        raise tpUtils.TpCheckError('Fatal Error! Illegal Board FW version info = ' + str(ret))
+                    else:
+                        self.pic_fw_ver = -1
+                        return self.pic_fw_ver
+        #print('count =', count)
+        return self.pic_fw_ver
+
+    def get_pic_fw_ver(self):
+        """ PICのFWのバージョンを返す
+            戻り : FWのバージョン（数値）
+        """
+        return self.pic_fw_ver
+
+    def check_pic_fw(self):
+        """ PICのFWバージョンをチェックし、古ければ更新する
+            戻り: なし
+        """
+        if gTpEnv == False: return
+
+        # fileよりバージョンチェック
+        try:
+            sub = subprocess.Popen('ls {0}'.format(PIC_FW_VER_DIR + PIC_FW_FILE),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True)
+            ret = sub.wait()
+            ret_bin = sub.stdout.readlines()
+            hex_file_path = str(ret_bin[0])[2:-3]
+            hex_file = os.path.split(hex_file_path)[1]
+            chk_ver = int(hex_file.split('.')[1])
+        except:
+            return # 更新該当ファイル取得できない場合は何もしない。
+
+        # フラグファイルチェック
+        sub = subprocess.Popen('ls {0}'.format(PIC_FW_FLG_FILE + str(chk_ver)),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True)
+        ret = sub.wait()
+        ret_bin = sub.stdout.readlines()
+        if len(ret_bin) != 0: return # 該当フラグファイルある場合なにもしない
+
+        # FW バージョンチェック
+        fw_ver = self.read_pic_fw_ver(False)
+        if fw_ver > 0: # FW正常時
+            if chk_ver == fw_ver: # 同じバージョンでフラグファイルないならつくる
+                sub = subprocess.Popen('touch {0}'.format(PIC_FW_FLG_FILE + str(chk_ver)),
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True)
+                ret = sub.wait()
+                return
+        self.__pic_fw_update(chk_ver, hex_file_path)
+        return
+
     def serial_write(self, slot, vals):
         """ Serial書き込み
+            slot : 1 ~ 10
+            vals : データリスト
+            戻り : なし
         """
         #print('serial_write', slot, vals)
         vals = [b for b in vals]
@@ -209,6 +343,7 @@ class TpP3Interface():
                 else:
                     self.__pic_spi_access(dat_addr, vals[:buff_num])
                     del vals[:buff_num]
+        return
 
     def spi_access(self, slot, mode, speed, endian, wait_ms, address, vals, no_use_buf_flg = False):
         """ SPI書き込み・読み出し
@@ -262,6 +397,10 @@ class TpP3Interface():
 
     def gpio_event_init(self, callback, slot, line):
         """ ダイレクトGPIO入力event用設定
+            callback : GPIO入力割り込み発生時のcallback関数
+            slot     : 1 ~ 10
+            line     : 1 ~ 4
+            戻り     : なし
         """
         if gTpEnv:
             if self.p3_flg > 0:
@@ -275,11 +414,13 @@ class TpP3Interface():
                 # -> __spi_access_thread の内部でチェックするよう変更
             # Slot & Line 登録
             self.__gpio_in_edge_table.append([slot, line])
+        return
 
     def analog_read(self, slot, line):
         """ GPIO読み出し
             slot : 1 ~ 10
             line : 1 ~ 4
+            戻り : analog値
         """
         if gTpEnv:
             addr = (slot - 1) * 4 + (line - 1) + 0x3D
@@ -296,23 +437,25 @@ class TpP3Interface():
         """ GPIO初期化
             slot : 1 ~ 10
             line : 1 ~ 4
-            kind : 2 ~ 4(IN/OUT_OD/OUT)
+            kind : 0 ~ 4(NONE/ANALOG/IN/OUT_OD/OUT)
             戻り : なし
         """
         #print('gpio_init', slot, line, kind)
         #self.__slot_set_p3(slot, SLOT_SETTING_NONE) # I2C/SPI/SerialでもGPIO使用することあるので、この設定をしてはいけない
         self.__line_set_p3(slot, line, kind)
+        return
 
     def gpio_in_out_init(self, slot, line, kind):
         """ GPIO実行時で設定
             slot : 1 ~ 10
             line : 1 ~ 4
-            kind : 2 ~ 4(IN/OUT_OD/OUT)
+            kind : 0 ~ 4(NONE/ANALOG/IN/OUT_OD/OUT)
             戻り : なし
         """
         #print('gpio_in_out_init', slot, line, kind)
         self.__slot_set(slot, SLOT_SETTING_NONE)
         self.__line_set(slot, line, kind)
+        return
 
     def gpio_read(self, slot, line):
         """ GPIO読み出し
@@ -349,26 +492,37 @@ class TpP3Interface():
             raise
         finally:
             self.__gpio_lock.release() # 排他解放
+        return
 
     def rp_button_init(self, callback):
         """ 基板ボタン用設定
+            callback : Serial読み込み割り込み発生時のcallback関数
+            戻り     : なし
         """
         self.rb_button_callback = callback
         GPIO.add_event_detect(24, GPIO.BOTH, callback = self.__rp_button_callback, bouncetime = 10) # MD
         GPIO.add_event_detect(23, GPIO.BOTH, callback = self.__rp_button_callback, bouncetime = 10) # RST
+        return
 
     def rp_buzzer(self, on):
         """ ラズパイブザーOn/Off
+            on  : 1=On, 0=Off
+            戻り: なし
         """
         #print('rp_buzzer', on)
         GPIO.output(15, on)
+        return
 
     def rp_led(self, num, on):
         """ ラズパイLED On/Off
+            num : LED番号
+            on  : 1=On, 0=Off
+            戻り: なし
         """
         #print('rp_led', num, on)
         on = 1 if on == 0 else 0
         GPIO.output(self.__rp_led_table[num - 1], on)
+        return
 
     def tp52_init(self, slot):
         """ tibbit #52初期化
@@ -389,6 +543,7 @@ class TpP3Interface():
         self.__slot_set_p3(slot, SLOT_SETTING_I2C)
         self.__line_set_p3(slot, 3, LINE_SETTING_D_OUT_OD)
         self.__line_set_p3(slot, 4, LINE_SETTING_D_IN)
+        return
 
     def tp22_temp(self):
         """ Tibbit#22, RTD読み出し
@@ -409,14 +564,15 @@ class TpP3Interface():
                 #raise ValueError('tp22_temp error! : c_ret = ' + str(c_ret))
                 return c_ret, -999999
             ret = int(ret_str[2:], 16)
-            #print(ret)
+            #print('tp22_temp', ret, ret_str)
             return c_ret, ret
         else:
-            pass
+            return 0, 0
 
     def i2c_read_tp22(self, num):
         """ Tibbit#22, I2C読み出し
-            num     : 読み込みbyte数
+            num : 読み込みbyte数
+            戻り: i2cデータ 
         """
         if gTpEnv:
             self.__subp_lock.acquire(1)
@@ -439,12 +595,12 @@ class TpP3Interface():
             #print(ret)
             return ret
         else:
-            pass
+            return []
 
     def i2c_write_tp22(self, data, addr = 0):
         """ Tibbit#22, I2C書き込み
-            data    : 1byteのみ、書き込みデータ
-            addr    : 指定されていたらSPIアドレス、0x80以上のはず
+            data : 1byteのみ、書き込みデータ
+            addr : 指定されていたらSPIアドレス、0x80以上のはず
             戻り : なし
         """
         if gTpEnv:
@@ -467,6 +623,7 @@ class TpP3Interface():
         """ FPGA Tibbit(#26,57), FPGAリセット＆書き込み
             slot      : 1 ~ 10
             file_path : binイメージのファイル名フルパス
+            戻り      : なし
         """
         #print('tpFPGA_write', slot, file_path)
         if gTpEnv:
@@ -488,10 +645,12 @@ class TpP3Interface():
             self.gpio_write(slot, 1, 1)
         else:
             pass
+        return
 
     def tpFPGA_debug(self, slot):
-        """ #26 記録開始
-            slot      : 1 ~ 10
+        """ #26動作デバッグ
+            slot : 1 ~ 10
+            戻り : なし
         """
         #print('tpFPGA_debug', slot)
         if gTpEnv:
@@ -500,10 +659,12 @@ class TpP3Interface():
                 raise ValueError('tpFPGA_debug error! : c_return = ' + str(c_return))
         else:
             pass
+        return
 
     def tp26_start_record(self, slot):
         """ #26 記録開始
-            slot      : 1 ~ 10
+            slot : 1 ~ 10
+            戻り : なし
         """
         #print('tp26_start_record', slot)
         if gTpEnv:
@@ -512,6 +673,7 @@ class TpP3Interface():
                 raise ValueError('tp26_start_record error! : c_return = ' + str(c_return))
         else:
             pass
+        return
 
     def tp26_get_record(self, slot):
         """ #26 記録読み込み
@@ -539,6 +701,7 @@ class TpP3Interface():
         """ #26 記録書き込み
             slot : 1 ~ 10
             vals : 記録したバイナリ配列
+            戻り : なし
         """
         #print('tp26_put_play', slot, vals)
         if gTpEnv:
@@ -551,10 +714,12 @@ class TpP3Interface():
                 raise ValueError('tp26_put_play error! : c_return = ' + str(c_return))
         else:
             pass
+        return
 
     def tp26_start_play(self, slot):
         """ #26 再生開始
-            slot      : 1 ~ 10
+            slot : 1 ~ 10
+            戻り : なし
         """
         #print('tp26_start_play', slot)
         if gTpEnv:
@@ -563,6 +728,7 @@ class TpP3Interface():
                 raise ValueError('tp26_start_play error! : c_return = ' + str(c_return))
         else:
             pass
+        return
 
     def i2c_read(self, address, cmd, num):
         """ I2C読み出し
@@ -572,22 +738,36 @@ class TpP3Interface():
             戻り    : i2cデータ
         """
         if gTpEnv:
-            self.__subp_lock.acquire(1)
-            try:
-                c_ret = self.__i2c_read_lib.i2c_read(self.__i2c_kbaud, address, num, cmd, self.__i2c_buf)
-                ret_str = str(repr(self.__i2c_buf.value))[2:-1]
-            except:
-                raise
-            finally:
-                self.__subp_lock.release()
-            #print(c_ret, self.__i2c_buf)
-            if c_ret != 0:
-                raise ValueError('i2c_read error! : c_ret = ' + str(c_ret))
+            retry1 = 0
+            retry2 = 0
+            while True:
+                self.__subp_lock.acquire(1)
+                err_flg = False
+                try:
+                    c_ret = self.__i2c_read_lib.i2c_read(self.__i2c_kbaud, address, num, cmd, self.__i2c_buf)
+                    ret_str = str(repr(self.__i2c_buf.value))[2:-1]
+                except:
+                    err_flg = True
+                    retry1 += 1
+                    if retry1 > I2C_RETRY_NUM:
+                        raise
+                    else:
+                        pass
+                finally:
+                    self.__subp_lock.release()
+                if err_flg: continue
+                #print(c_ret, self.__i2c_buf)
+                if c_ret != 0:
+                    retry2 += 1
+                    if retry2 > I2C_RETRY_NUM:
+                        raise ValueError('i2c_read error! : c_ret = ' + str(c_ret))
+                else:
+                    break
+                time.sleep(0.01)
             ret_str_sep = ret_str.split(',')
             ret = []
             for elem in ret_str_sep:
                 ret.append(int(elem[2:], 16)) 
-            #print(ret)
             return ret
         else:
             pass
@@ -612,7 +792,7 @@ class TpP3Interface():
         return
 
     def i2c_write_block_data(self, address, cmd, vals):
-        """ I2C 2byte書き込み
+        """ I2C block書き込み
             address : I2Cアドレス
             cmd     : コマンド
             vals    : データリスト
@@ -622,16 +802,31 @@ class TpP3Interface():
             dat_str = 'x' + format(int(cmd), '02x')
             for elem in vals: dat_str += 'x' + format(int(elem), '02x')
             #print(dat_str)
-            self.__subp_lock.acquire(1)
-            try:
-                c_ret = self.__i2c_write_lib.i2c_write(self.__i2c_kbaud, address, len(vals) + 1, dat_str.encode('utf-8'))
-            except:
-                raise
-            finally:
-                self.__subp_lock.release()
-            #print(c_ret)
-            if c_ret != 0:
-                raise ValueError('i2c_write error! : c_ret = ' + str(c_ret))
+            retry1 = 0
+            retry2 = 0
+            while True:
+                self.__subp_lock.acquire(1)
+                err_flg = False
+                try:
+                    c_ret = self.__i2c_write_lib.i2c_write(self.__i2c_kbaud, address, len(vals) + 1, dat_str.encode('utf-8'))
+                except:
+                    err_flg = True
+                    retry1 += 1
+                    if retry1 > I2C_RETRY_NUM:
+                        raise
+                    else:
+                        pass
+                finally:
+                    self.__subp_lock.release()
+                if err_flg: continue
+                #print(c_ret)
+                if c_ret != 0:
+                    retry2 += 1
+                    if retry2 > I2C_RETRY_NUM:
+                        raise ValueError('i2c_write error! : c_ret = ' + str(c_ret))
+                else:
+                    break
+                time.sleep(0.01)
         else:
             pass
         return
@@ -639,6 +834,7 @@ class TpP3Interface():
     def i2c_select(self, slot=0):
         """ I2C用slot選択
             slot : 0(未選択), 1~10
+            戻り : なし
         """
         self.__i2c_kbaud = self.__i2c_kbaud_list[slot]
         if slot >= 1 and slot <= 5:
@@ -650,18 +846,65 @@ class TpP3Interface():
         else:
             self.i2c_write_1byte(0x70, 0)
             self.i2c_write_1byte(0x71, 0)
+        return
 
     def dbg_pic_reg_print(self, addr, num):
         """ Debug用PICレジスタ表示
             addr : 0x00～0x7F
             num  : byte数
+            戻り : なし
         """
         dat = [0] * num
         ret = self.__pic_spi_access(addr, dat)
         #print('dbg_pic_reg_print', ret)
         for i, v in enumerate(ret): print(hex(i + addr), hex(v))
+        return
+
 
     # 内部メソッド ---
+
+    def __pic_fw_update(self, ver, hex_file_path):
+        """ PICのFW update
+            ver : FW バージョン番号
+            hex_file_path : FWファイルのパス
+            戻り: なし
+        """
+        # フラグファイル消去
+        sub = subprocess.Popen('rm {0}'.format(PIC_FW_FLG_FILE + str(ver)),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True)
+        ret = sub.wait()
+
+        # FW更新
+        tpUtils.stdout('Board FW updating...')
+        try:
+            cmd = PIC_FW_VER_DIR + PIC_PICBERRY
+            sub = subprocess.Popen(['sudo', cmd, '-f', 'pic18f66k40', '-g', 'C:18,D:17,M:14', '-w', hex_file_path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False)
+            ret = sub.wait()
+            ret_bin = sub.stdout.readlines()
+            ret_chk = str(ret_bin[-1])[2:-3]
+            if ret_chk.find('DONE!') == -1: raise
+            time.sleep(PIC_INIT_LED_WIAT) # PIC起動待ち
+            self.read_pic_fw_ver(True)
+            tpUtils.stdout('Board FW update finished!')
+        except:
+            raise tpUtils.TpCheckError('Fatal Error ! Board FW update error!')
+
+        # 書き込み後フラグファイル対応
+        sub = subprocess.Popen('touch {0}'.format(PIC_FW_FLG_FILE + str(ver)),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True)
+        ret = sub.wait()
+
+        return
 
     #def serial_event_callback_test(self, pin):
     #    self.__serial_event_callback(pin)
@@ -1018,7 +1261,7 @@ class TpP3Interface():
             if out != ret:
                 retry += 1
                 #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
-                if retry > 10: 
+                if retry > SPI_RETRY_NUM: 
                     #print('__spi_write_buf_put NG!!!!', retry, list(map(hex, out)), list(map(hex, ret)))
                     raise ValueError('__spi_write_buf_put retry error!') 
                     break

@@ -58,13 +58,15 @@ class Tp30:
                 # 失敗
                 time.sleep(0.03)
                 continue
-            
-            break
 
-        rtn = {}
-        rtn['humd'] = humd
-        rtn['temp'] = temp
-        return rtn
+            # 正常
+            rtn = {}
+            rtn['humd'] = humd
+            rtn['temp'] = temp
+            return rtn
+
+        # 異常
+        raise ValueError('Tibbit #30 acquisition failed.')
 
 
 if __name__ == '__main__':
