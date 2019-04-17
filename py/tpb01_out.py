@@ -34,9 +34,9 @@ class Tpb01_out:
         for data in datas:
 
             # Line
-            if data['no'] == 1:
+            if tpUtils.to_num(data['no']) == 1:
                 line = 'A'
-            elif data['no'] == 2:
+            elif tpUtils.to_num(data['no']) == 2:
                 line = 'B'
             else:
                 raise ValueError('TPbit #01 no error!')

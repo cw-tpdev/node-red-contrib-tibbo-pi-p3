@@ -94,71 +94,79 @@ class Tp16_out(Tp31):
         データを送信します。
         """
 
-        datas = json.loads(msg)
+        # Lock
+        self.tcp_client.lock(self.slot)
+        try:
 
-        for data in datas:
+            datas = json.loads(msg)
 
-            # ch
-            ch = data['ch']
-            # 1周期長さ[us] 0.1(0.125)～2048
-            period = data['period']
-            # パルス幅 [us] 0～0.3125～period
-            pulse_width = data['pulse_width']
+            for data in datas:
 
-            # PWM計算
-            if period < 32.0:
-                txcon = 0
-                txcon_val = 1
-                prx = round(period / 0.125)
-            elif period < 128.0:
-                txcon = 1
-                txcon_val = 4
-                prx = round(period / 0.5)
-            elif period < 512.0:
-                txcon = 2
-                txcon_val = 16
-                prx = round(period / 2.0)
-            elif period <= 2048.0:
-                txcon = 3
-                txcon_val = 64
-                prx = round(period / 8.0)
-            else:
-                raise ValueError('period error!')
-            prx = prx - 1 if prx != 0 else 0
+                # ch
+                ch = data['ch']
+                # 1周期長さ[us] 0.1(0.125)～2048
+                period = data['period']
+                # パルス幅 [us] 0～0.3125～period
+                pulse_width = data['pulse_width']
 
-            if pulse_width < 0 or pulse_width > period:
-                raise ValueError('pulse_width error!')
+                # PWM計算
+                if period < 32.0:
+                    txcon = 0
+                    txcon_val = 1
+                    prx = round(period / 0.125)
+                elif period < 128.0:
+                    txcon = 1
+                    txcon_val = 4
+                    prx = round(period / 0.5)
+                elif period < 512.0:
+                    txcon = 2
+                    txcon_val = 16
+                    prx = round(period / 2.0)
+                elif period <= 2048.0:
+                    txcon = 3
+                    txcon_val = 64
+                    prx = round(period / 8.0)
+                else:
+                    raise ValueError('period error!')
+                prx = prx - 1 if prx != 0 else 0
 
-            ccp10bit = round(pulse_width * 32 / txcon_val)
-            ccpcon54 = (ccp10bit & 0x0003) << 4
-            ccprxl = ccp10bit >> 2
+                if pulse_width < 0 or pulse_width > period:
+                    raise ValueError('pulse_width error!')
 
-            # パラメータ表示例
-            #print('1周期長さ=', period, '[us]')
-            #print('周波数=', 1. / period * 1000000, '[Hz]')
-            #print('パルス幅 =', pulse_width, '[us]')
-            #print('duty比 =', pulse_width / period * 100, '[%]')
+                ccp10bit = round(pulse_width * 32 / txcon_val)
+                ccpcon54 = (ccp10bit & 0x0003) << 4
+                ccprxl = ccp10bit >> 2
 
-            if ch == 1:
+                # パラメータ表示例
+                #print('1周期長さ=', period, '[us]')
+                #print('周波数=', 1. / period * 1000000, '[Hz]')
+                #print('パルス幅 =', pulse_width, '[us]')
+                #print('duty比 =', pulse_width / period * 100, '[%]')
 
-                self.pic_reg_write(0x001B, [prx])   # PR2
-                self.pic_reg_write(0x001C, [0x04 | txcon])  # T2CON
-                self.pic_reg_write(0x0291, [ccprxl])  # CCPR1L
-                self.pic_reg_write(0x0293, [0x0C | ccpcon54])  # CCP1CON
+                if ch == 1:
 
-            elif ch == 2:
+                    self.pic_reg_write(0x001B, [prx])   # PR2
+                    self.pic_reg_write(0x001C, [0x04 | txcon])  # T2CON
+                    self.pic_reg_write(0x0291, [ccprxl])  # CCPR1L
+                    self.pic_reg_write(0x0293, [0x0C | ccpcon54])  # CCP1CON
 
-                self.pic_reg_write(0x0416, [prx])   # PR4
-                self.pic_reg_write(0x0417, [0x04 | txcon])  # T4CON
-                self.pic_reg_write(0x0298, [ccprxl])  # CCPR2L
-                self.pic_reg_write(0x029A, [0x0C | ccpcon54])  # CCP2CON
+                elif ch == 2:
 
-            elif ch == 3:
+                    self.pic_reg_write(0x0416, [prx])   # PR4
+                    self.pic_reg_write(0x0417, [0x04 | txcon])  # T4CON
+                    self.pic_reg_write(0x0298, [ccprxl])  # CCPR2L
+                    self.pic_reg_write(0x029A, [0x0C | ccpcon54])  # CCP2CON
 
-                self.pic_reg_write(0x041D, [prx])   # PR6
-                self.pic_reg_write(0x041E, [0x04 | txcon])  # T6CON
-                self.pic_reg_write(0x0311, [ccprxl])  # CCPR3L
-                self.pic_reg_write(0x0313, [0x0C | ccpcon54])  # CCP3CON
+                elif ch == 3:
+
+                    self.pic_reg_write(0x041D, [prx])   # PR6
+                    self.pic_reg_write(0x041E, [0x04 | txcon])  # T6CON
+                    self.pic_reg_write(0x0311, [ccprxl])  # CCPR3L
+                    self.pic_reg_write(0x0313, [0x0C | ccpcon54])  # CCP3CON
+
+        finally:
+            # unLock
+            self.tcp_client.unlock(self.slot)
 
 
 if __name__ == '__main__':

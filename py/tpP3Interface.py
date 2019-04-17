@@ -324,7 +324,7 @@ class TpP3Interface():
             vals : データリスト
             戻り : なし
         """
-        #print('serial_write', slot, vals)
+        #print('serial_write', slot, list(map(hex, vals)))
         vals = [b for b in vals]
         
         if slot % 2 == 0: return # 奇数slotのみ対応
@@ -335,6 +335,7 @@ class TpP3Interface():
             while len(vals):
                 dmy = [0]
                 buff_num = 250 - self.__pic_spi_access(num_addr, dmy)[0]
+                #print('buff_num =', buff_num, len(vals))
                 if buff_num >= len(vals):
                     self.__pic_spi_access(dat_addr, vals)
                     vals.clear()
@@ -906,8 +907,6 @@ class TpP3Interface():
 
         return
 
-    #def serial_event_callback_test(self, pin):
-    #    self.__serial_event_callback(pin)
     def __serial_event_callback(self, pin):
         #print('__serial_event_callback pin =', pin)
         pos = self.__serial_int_table.index(pin)
@@ -915,13 +914,19 @@ class TpP3Interface():
         if gTpEnv:
             num_addr = pos + 0x6A
             dat_addr = pos + 0x74
-            while True:
+            if True:
                 dmy = [0]
                 buff_num = self.__pic_spi_access(num_addr, dmy)[0]
-                if buff_num == 0: break
-                dmy = [0] * buff_num
+                dmy = [0xFF] * buff_num
+                dmy[buff_num - 1] = 0 # 送信データの最後は0x00でマーク
                 data = self.__pic_spi_access(dat_addr, dmy)
                 #print(slot, buff_num, list(map(hex, data)))
+                err_addr = pos + 0x65
+                dmy = [0]
+                err_dat = self.__pic_spi_access(err_addr, dmy)
+                if err_dat[0] & 0x0E != 0:
+                    #data.insert(0, err_dat[0] + 0x100)
+                    print(slot, 'err_dat =', hex(err_dat[0]))
                 self.serial_event_callback(slot, data)
 
     def __serial_data(self, baud, flow, parity):

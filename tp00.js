@@ -51,8 +51,25 @@ module.exports = function (RED) {
         // common
         var tc = new TpCommon("tp00_in", node);
 
+        // GPIOの場合、ノードごとにIN_Edgeを拾うか違うため、設定を取得しpythonの引数へ渡す
+        var gpioFlg = [];
+        if (config.communication == 'GPIO') {
+            if (config.pinA && config.pinA != 'other') {
+                gpioFlg.push('A');
+            }
+            if (config.pinB && config.pinB != 'other') {
+                gpioFlg.push('B');
+            }
+            if (config.pinC && config.pinC != 'other') {
+                gpioFlg.push('C');
+            }
+            if (config.pinD && config.pinD != 'other') {
+                gpioFlg.push('D');
+            }
+        }
+
         // Launch python
-        tc.execPy([config.tpSlot, config.communication, config.host]);
+        tc.execPy([config.tpSlot, config.communication, config.host, JSON.stringify(gpioFlg)]);
 
         // On Node Output
         tc.onOutput(function (msg, payload) {
