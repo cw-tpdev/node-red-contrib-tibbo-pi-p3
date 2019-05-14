@@ -547,12 +547,15 @@ class TpBoardInterface:
         """
         #print('__serial_recv_char', slot, char, len(char))
         pos = int((slot - 1) / 2)
-        if ord(char) in self.__serial_recv_buf[pos]:
-            buf_pos = self.__serial_recv_buf[pos].index(ord(char))
-            send_data = self.__serial_recv_buf[pos][:buf_pos + 1] # 区切り文字含め、実copy
-            #print(tpUtils.slot_int_to_str(slot), send_data, self.__serial_recv_buf)
-            del self.__serial_recv_buf[pos][:buf_pos + 1]
-            self.callback_send(tpUtils.slot_int_to_str(slot), Serial, json.dumps(send_data))
+        while True:
+            if ord(char) in self.__serial_recv_buf[pos]:
+                buf_pos = self.__serial_recv_buf[pos].index(ord(char))
+                send_data = self.__serial_recv_buf[pos][:buf_pos + 1] # 区切り文字含め、実copy
+                #print(tpUtils.slot_int_to_str(slot), send_data, self.__serial_recv_buf)
+                del self.__serial_recv_buf[pos][:buf_pos + 1]
+                self.callback_send(tpUtils.slot_int_to_str(slot), Serial, json.dumps(send_data))
+            else:
+                break
 
     def __serial_recv_leng(self, slot, leng):
         """Serial受信固定長区切り

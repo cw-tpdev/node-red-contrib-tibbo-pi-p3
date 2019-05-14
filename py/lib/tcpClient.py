@@ -154,6 +154,12 @@ class TcpClient:
 
                 # 分割して処理
                 datas = recv_data.split(self.buf_split)
+
+                # データが最後まで取得できているかチェック
+                # 終わっていない場合は次のループで取得してもらう
+                if recv_data.endswith(self.buf_split) == False:
+                    datas = datas[:-1]
+
                 for data in datas:
 
                     if data != b"" and self.callback_recv != None:
