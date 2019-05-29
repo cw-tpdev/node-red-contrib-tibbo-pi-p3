@@ -1,0 +1,43 @@
+<script type="text/javascript">
+    RED.nodes.registerType('tp-fan out', {
+        category: 'Tibbo‐Pi',
+        color: '#23bc82',
+        defaults: {
+            name: { value: "" },
+            tpSlot: { value: "S00" },
+            communication: { value: "TP_FAN"},
+
+            connectedStatus: { value: "start" },
+            host: { value: "" },
+        },
+        inputs: 1,
+        outputs: 0,
+        icon: "tbpi-icon.png",
+        label: function () {
+            return this.name || "tp fan";
+        },
+        align: 'right'
+    });
+</script>
+
+<script type="text/x-red" data-template-name="tp-fan out">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> <span data-i18n="common.name"></span></label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+    <!-- other -->
+    <label for="node-input-connectedStatus"><i class="icon-tag"></i> <span data-i18n="common.other"></span></label>
+    <div class="form-row">
+        <label for="node-input-connectedStatus"> <span data-i18n="common.connectedStatus"></label>
+        <select style="width: 200px" id="node-input-connectedStatus">
+            <option value="start" data-i18n="common.connectedStatusPtn.start"></option>
+            <option value="stop" data-i18n="common.connectedStatusPtn.stop"></option>
+            <option value="disabled" data-i18n="common.connectedStatusPtn.disabled"></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-host"> <span data-i18n="common.host"></span></label>
+        <input type="text" id="node-input-host" placeholder="localhost">
+    </div>
+</script>

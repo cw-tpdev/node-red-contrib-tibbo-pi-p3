@@ -525,6 +525,15 @@ class TpP3Interface():
         GPIO.output(self.__rp_led_table[num - 1], on)
         return
 
+    def rp_fan(self, val):
+        """ ボードファン制御
+            val : 1/0, 1=On
+            戻り: なし
+        """
+        #print('rp_fan', val)
+        GPIO.output(6, val)
+        return
+
     def tp52_init(self, slot):
         """ tibbit #52初期化
             slot  : 1 ~ 10
@@ -1002,6 +1011,9 @@ class TpP3Interface():
         GPIO.setup(23, GPIO.IN, pull_up_down = GPIO.PUD_UP) # RST
         # 基板BZ
         GPIO.setup(15, GPIO.OUT)
+        # ラズパイFAN 
+        GPIO.setup(6, GPIO.OUT)
+        self.rp_fan(0) # 起動時停止
 
     def __gpio_read(self, addr, slot, line):
         addr = int((slot - 1) / 2) + addr

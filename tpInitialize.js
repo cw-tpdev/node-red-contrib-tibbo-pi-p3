@@ -158,6 +158,8 @@ module.exports = function (RED) {
             port = port + 21;
         } else if (comm == 'TP_BUTTON') {
             port = port + 31;
+        } else if (comm == 'TP_FAN') {
+            port = port + 41;
         }
 
         // setteings

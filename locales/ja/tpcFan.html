@@ -1,0 +1,29 @@
+<script type="text/x-red" data-help-name="tp-fan out">
+    <p>Tibbo-Pi ファン</p>
+
+    <h3>Details</h3>
+    <p>Tibbo-Piのファンの制御を行います。</p>
+    <p>本ノードはTibbo-Pi [P3.1] CPU冷却ユニット付でのみ使用できます。</p>
+
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload
+            <span class="property-type">object</span>
+        </dt>
+        <dd>
+            <p><code>v</code>: 1:回転, 0:停止</p>
+            
+            <p>e.g.</p>
+            <ul>
+                <li>
+                    ファンを回転させる<br>
+                    <pre>{v: 1}</pre>
+                </li>
+                <li>
+                    ファンを停止させる<br>
+                    <pre>{v: 0}</pre>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+</script>

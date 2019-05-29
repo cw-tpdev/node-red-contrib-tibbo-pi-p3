@@ -411,6 +411,15 @@ class TpBoardInterface:
             raise ValueError('Board LED number error! 1~4 : ' + str(num_int))
         return
 
+    def rp_fan(self, val):
+        """ ボードファン制御
+            val : 1/0, 1=On
+            戻り: なし
+        """
+        val_int = int(val) if type(val) is str else val
+        self.__board.rp_fan(val_int)
+        return
+
     def get_pic_fw_ver(self):
         """ PICのFWのバージョンを返す
             戻り : FWのバージョン（数値）

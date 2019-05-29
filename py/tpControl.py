@@ -75,6 +75,23 @@ class TpControl:
             # 戻り値は無し
             return
 
+        elif setting['comm'] == TP_FAN:
+            #--------------
+            # Fan
+            #--------------
+
+            # Jsonでデータ取得
+            data = json.loads(rcv_msg.decode())
+
+            # 値
+            val = data['v']
+
+            # Fanの制御を行う
+            self.tp_inter.rp_fan(val)
+
+            # 戻り値は無し
+            return
+
         # 以下、通信方式により各制御を行う
         elif setting['comm'] == GPIO:
             #--------------
