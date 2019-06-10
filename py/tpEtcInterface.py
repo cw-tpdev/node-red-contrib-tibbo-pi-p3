@@ -23,8 +23,8 @@ class TpEtcInterface:
         self.__RTD_B = -5.870e-7
 
         # #52
-        self.__tp52_err_comp = [0] * 4
-
+        self.__tp52_err_comp = [[0, 0, 0, 0] for i in range(10)]
+ 
     def tp22_init(self, slot):
         """ Tibbit #22 初期化
             slot : 'S01' ~ 'S10'
@@ -150,12 +150,12 @@ class TpEtcInterface:
         self.__tp52_int_wait(slot)
         time.sleep(0.1) # 150Kbpsにしてさらにwait必要
         v = self.__inter.i2c_read_with_cmd(slot, 0x10, 0, 16)
-        #print(list(map(hex, v)))
-        self.__tp52_err_comp[0] = self.__tp52_error_compensation(v[0],  v[1],  v[2],  v[3])
-        self.__tp52_err_comp[1] = self.__tp52_error_compensation(v[4],  v[5],  v[6],  v[7])
-        self.__tp52_err_comp[2] = self.__tp52_error_compensation(v[8],  v[9],  v[10], v[11])
-        self.__tp52_err_comp[3] = self.__tp52_error_compensation(v[12], v[13], v[14], v[15])
-        #print(self.__tp52_err_comp)
+        #print(slot, list(map(hex, v)))
+        self.__tp52_err_comp[slot_num - 1][0] = self.__tp52_error_compensation(v[0],  v[1],  v[2],  v[3])
+        self.__tp52_err_comp[slot_num - 1][1] = self.__tp52_error_compensation(v[4],  v[5],  v[6],  v[7])
+        self.__tp52_err_comp[slot_num - 1][2] = self.__tp52_error_compensation(v[8],  v[9],  v[10], v[11])
+        self.__tp52_err_comp[slot_num - 1][3] = self.__tp52_error_compensation(v[12], v[13], v[14], v[15])
+        #print(slot, self.__tp52_err_comp[slot_num - 1])
         self.__tp52_int_wait(slot)
         return
 
@@ -173,13 +173,19 @@ class TpEtcInterface:
             raise ValueError('tp52_get_volt error! : ch = ' + ch)
 
         flg = 0
+        count = 0
         while True:
             while True:
-                time.sleep(0.01)
+                time.sleep(0.1)
                 self.__inter.i2c_write_with_cmd(slot, 0x10, 0x01, [ch_num - 1])
                 self.__tp52_int_wait(slot)
                 v = self.__inter.i2c_read_with_cmd(slot, 0x10, 0, 3)
                 if v[2] & 0x80 == 0: break
+                count += 1
+                if count > 20:
+                    self.tp52_init(slot)
+                    count = 0
+                    flg = 0
             if flg == 0:
                 self.__inter.i2c_write_with_cmd(slot, 0x10, 0x02, [ch_num - 1, 0x9C])
                 self.__tp52_int_wait(slot)
@@ -201,12 +207,19 @@ class TpEtcInterface:
         return volt
         """
         
-    def tp52_get_correct(self, slot):
+    def tp52_get_correct(self, slot, ch):
         """ #52 補正値を返す
             slot : 'S01', 'S03', 'S07', 'S09'
-            戻り : 4chぶんの補正値
+            ch   : 'CH1'~'CH4'
+            戻り : 補正値
         """
-        return self.__tp52_err_comp
+        slot_num = tpUtils.slot_str_to_int(slot)
+        if slot_num != 1 and slot_num != 3 and slot_num != 7 and slot_num != 9:
+            raise ValueError('tp52_get_correct error! : slot = ' + slot)
+        ch_num = int(ch[2])
+        if ch_num < 1 or ch_num > 4:
+            raise ValueError('tp52_get_correct error! : ch = ' + ch)
+        return self.__tp52_err_comp[slot_num - 1][ch_num - 1]
 
    # 内部メソッド ---
 

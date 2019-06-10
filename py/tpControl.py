@@ -38,9 +38,9 @@ class TpControl:
         rcv_msg: 制御するための情報
         """
         if setting['comm'] == TP_BUZZER:
-            #--------------
+            # --------------
             # ブザー
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())
@@ -57,9 +57,9 @@ class TpControl:
             return
 
         elif setting['comm'] == TP_LED:
-            #--------------
+            # --------------
             # LED
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())
@@ -76,9 +76,9 @@ class TpControl:
             return
 
         elif setting['comm'] == TP_FAN:
-            #--------------
+            # --------------
             # Fan
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())
@@ -94,9 +94,9 @@ class TpControl:
 
         # 以下、通信方式により各制御を行う
         elif setting['comm'] == GPIO:
-            #--------------
+            # --------------
             # GPIO
-            #--------------
+            # --------------
 
             # 戻り値配列
             rtn = []
@@ -174,9 +174,9 @@ class TpControl:
             return json.dumps(rtn)
 
         elif setting['comm'] == I2C:
-            #--------------
+            # --------------
             # I2c
-            #--------------
+            # --------------
 
             # 戻り値配列
             rtn = []
@@ -225,9 +225,9 @@ class TpControl:
             return json.dumps(rtn)
 
         elif setting['comm'] == SPI:
-            #--------------
+            # --------------
             # SPI
-            #--------------
+            # --------------
 
             # 戻り値配列
             rtn = []
@@ -254,21 +254,21 @@ class TpControl:
             return json.dumps(rtn)
 
         elif setting['comm'] == Serial:
-            #--------------
+            # --------------
             # Serial
-            #--------------
+            # --------------
 
             # Serial送信の処理を行う。
-            rtn_data = self.tp_inter.serial_write(
+            self.tp_inter.serial_write(
                 setting['slot'], rcv_msg)
 
             # 戻り値は無し
             return
 
         elif setting['comm'] == 'TP22':
-            #--------------
+            # --------------
             # Tibbit #22
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())
@@ -289,9 +289,9 @@ class TpControl:
                 return str(self.etc_inter.tp22_get_temp(setting['slot'], setting['settings']['kind']))
 
         elif setting['comm'] == 'TP26':
-            #--------------
+            # --------------
             # Tibbit #26
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())
@@ -327,9 +327,9 @@ class TpControl:
             return
 
         elif setting['comm'] == 'TP52':
-            #--------------
+            # --------------
             # Tibbit #52
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             datas = json.loads(rcv_msg.decode())
@@ -338,10 +338,6 @@ class TpControl:
 
                 # 初期化
                 self.etc_inter.tp52_init(setting['slot'])
-
-                # 補正値の取得
-                self.tp52_correct = self.etc_inter.tp52_get_correct(
-                    setting['slot'])
 
             else:
 
@@ -354,12 +350,8 @@ class TpControl:
                     ch = "CH" + str(data['ch'])
 
                     # 補正値取得
-                    cor = None
-                    try:
-                        idx = data['ch'] - 1
-                        cor = self.tp52_correct[idx]
-                    except:
-                        pass
+                    cor = self.tp52_correct = self.etc_inter.tp52_get_correct(
+                        setting['slot'], ch)
 
                     # 電圧取得
                     vol = self.etc_inter.tp52_get_volt(
@@ -377,9 +369,9 @@ class TpControl:
             return
 
         elif setting['comm'] == 'TP57':
-            #--------------
+            # --------------
             # Tibbit #57
-            #--------------
+            # --------------
 
             # Jsonでデータ取得
             data = json.loads(rcv_msg.decode())

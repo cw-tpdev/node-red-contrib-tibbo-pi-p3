@@ -434,6 +434,7 @@ class TpBoardInterface:
             戻り    : なし
         """
         slot_num = tpUtils.slot_str_to_int(setting['slot'])
+        self.__board.i2c_init(slot_num, 50) # 50Kbps
         self.__board.tp52_init(slot_num)
 
     def __tp22_init(self, setting):

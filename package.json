@@ -54,7 +54,7 @@
       "tpgI2cThermocoupleAmplifier": "tpgI2cThermocoupleAmplifier.js"
     }
   },
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Node-RED nodes for Tibbo-Pi P3",
   "main": "tpInitialize.js",
   "scripts": {},
